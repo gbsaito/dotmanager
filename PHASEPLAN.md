@@ -26,6 +26,7 @@ Everything the spec lists under Extra, only after Phase 1 is approved:
 - Profiles plus common (shared) files.
 - Optional encryption.
 - Themes.
+- Mouse and scroll support in the file explorer and managed panels.
 
 ## Phase 3 - Open decisions / polish
 

@@ -1,10 +1,12 @@
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react"
+import type { MouseEvent } from "@opentui/core"
 import { useMemo, useState } from "react"
 import { createCtx, saveConfig, type Config } from "../core/config.ts"
 import { ensureRepo, isRepo, pull, push, setRemote, sync, connectRemote } from "../core/git.ts"
 import { adopt, apply, unmanage } from "../core/ops.ts"
 import { loadState, recordAction, saveState, type State } from "../core/state.ts"
 import { displayPath } from "../core/util.ts"
+import { scrollDelta } from "./mouse.ts"
 import { MainPanel } from "./MainPanel.tsx"
 import { StatusPanel, type PromptState } from "./StatusPanel.tsx"
 import { Sidebar } from "./Sidebar.tsx"
@@ -100,6 +102,19 @@ export function App() {
     setMessage(null)
     if (focus === "files") setSidebarIndex(clampIndex(sIdx + delta, rows.length))
     else setMainIndex(clampIndex(mIdx + delta, managedTree.length))
+  }
+
+  /** Mouse wheel over a panel moves that panel's list, like the arrow keys. */
+  const handleSidebarScroll = (event: MouseEvent) => {
+    if (prompt || focus !== "files") return
+    const delta = scrollDelta(event)
+    if (delta !== 0) moveSelection(delta)
+  }
+
+  const handleManagedScroll = (event: MouseEvent) => {
+    if (prompt || focus !== "managed") return
+    const delta = scrollDelta(event)
+    if (delta !== 0) moveSelection(delta)
   }
 
   const activate = (enter: boolean) => {
@@ -295,6 +310,7 @@ export function App() {
           rootLabel="~"
           managed={managedPaths}
           expanded={expanded}
+          onMouseScroll={handleSidebarScroll}
         />
         <MainPanel
           rows={managedTree}
@@ -305,6 +321,7 @@ export function App() {
           height={mainHeight}
           storageLabel={displayPath(ctx.storage, ctx.home)}
           pending={state.pending.length}
+          onMouseScroll={handleManagedScroll}
         />
       </box>
       <StatusPanel

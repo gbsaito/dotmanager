@@ -1,6 +1,7 @@
 import { colors } from "./theme.ts"
 import { truncate } from "./text.ts"
 import { windowSlice, type TreeRow } from "./tree.ts"
+import type { MouseEvent } from "@opentui/core"
 
 type SidebarProps = {
   rows: TreeRow[]
@@ -11,9 +12,10 @@ type SidebarProps = {
   rootLabel: string
   managed: Set<string>
   expanded: Set<string>
+  onMouseScroll?: (event: MouseEvent) => void
 }
 
-export function Sidebar({ rows, selected, focused, width, height, rootLabel, managed, expanded }: SidebarProps) {
+export function Sidebar({ rows, selected, focused, width, height, rootLabel, managed, expanded, onMouseScroll }: SidebarProps) {
   const inner = Math.max(0, height - 3)
   const view = windowSlice(rows, selected, inner)
   const textWidth = Math.max(8, width - 3)
@@ -22,6 +24,7 @@ export function Sidebar({ rows, selected, focused, width, height, rootLabel, man
     <box
       title={` Files ${rootLabel} `}
       titleColor={colors.muted}
+      onMouseScroll={onMouseScroll}
       style={{
         width,
         height,
@@ -40,7 +43,8 @@ export function Sidebar({ rows, selected, focused, width, height, rootLabel, man
           const arrow = row.isDir ? (expanded.has(row.path) ? "▾ " : "▸ ") : "  "
           const marker = managed.has(row.path) ? "●" : " "
           const suffix = row.isSymlink ? " →" : ""
-          const line = `${marker}${arrow}${"  ".repeat(row.depth)}${row.name}${suffix}`
+          const folder = row.isDir ? "" : ""
+          const line = `${marker}${arrow}${"  ".repeat(row.depth)}${folder}${row.name}${suffix}`
           const color = managed.has(row.path)
             ? colors.success
             : row.isDir

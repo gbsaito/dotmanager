@@ -21,6 +21,11 @@ started.
 
 ## Done
 
+- Mouse and scroll support: renderer runs with `useMouse: true`; the wheel over
+  the focused panel moves that panel's selection (up/down), clamped at the ends,
+  and scroll is ignored while a prompt is open. Scroll direction mapping lives in
+  `src/ui/mouse.ts` and is covered by `test/mouse.test.ts`.
+
 - Project scaffold with Bun, TypeScript, React and `@opentui/react`.
 - Core modules:
   - config load/save with `~/dotfiles` default and `~` expansion;

@@ -71,6 +71,10 @@ A failure at any step rolls the filesystem back to its original layout.
 Layout A: file explorer on the left, managed list on the right, status bar
 below. The focused panel has a highlighted border and selected row.
 
+Mouse and scroll: the renderer runs with `useMouse` enabled, and the wheel over
+the focused panel moves the selection like the arrow keys (up/down scroll,
+clamped at the ends). Scrolling is ignored while a prompt is open.
+
 The managed panel is a directory tree grouped by real paths, so
 `~/.config/fastfetch` renders as `.config > fastfetch` and
 `~/.local/share/wireplumber` as `.local > share > wireplumber`. Path segments
@@ -117,5 +121,5 @@ carries the hierarchy.
 
 ## Out of scope until later phases
 
-Package management, profiles/common files, encryption, themes, mouse support,
-conflict resolution UI, and multi-machine merge strategy.
+Package management, profiles/common files, encryption, themes, conflict
+resolution UI, and multi-machine merge strategy.

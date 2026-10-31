@@ -1,6 +1,7 @@
 import { truncate } from "./text.ts"
 import { colors } from "./theme.ts"
 import { windowSlice, type ManagedRow } from "./tree.ts"
+import type { MouseEvent } from "@opentui/core"
 
 type MainPanelProps = {
   rows: ManagedRow[]
@@ -11,9 +12,10 @@ type MainPanelProps = {
   width: number
   storageLabel: string
   pending: number
+  onMouseScroll?: (event: MouseEvent) => void
 }
 
-export function MainPanel({ rows, itemCount, selected, focused, height, width, storageLabel, pending }: MainPanelProps) {
+export function MainPanel({ rows, itemCount, selected, focused, height, width, storageLabel, pending, onMouseScroll }: MainPanelProps) {
   const inner = Math.max(0, height - 4)
   const view = windowSlice(rows, selected, inner)
   const textWidth = Math.max(10, width - 4)
@@ -22,6 +24,7 @@ export function MainPanel({ rows, itemCount, selected, focused, height, width, s
     <box
       title=" Managed "
       titleColor={colors.muted}
+      onMouseScroll={onMouseScroll}
       style={{
         flexGrow: 1,
         height,
