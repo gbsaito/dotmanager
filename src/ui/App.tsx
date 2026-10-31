@@ -167,6 +167,12 @@ export function App() {
       return
     }
 
+    // Terminals report shift+r as either "R" (raw) or "r" + shift (kitty protocol).
+    if (key.name === "R" || (key.name.toLowerCase() === "r" && key.shift)) {
+      openPrompt("remote")
+      return
+    }
+
     switch (key.name) {
       case "tab":
         setFocus(focus === "files" ? "managed" : "files")
@@ -202,9 +208,6 @@ export function App() {
         break
       case "u":
         runGit("pull")
-        break
-      case "R":
-        openPrompt("remote")
         break
       case "a":
         openPrompt("path")
