@@ -1,0 +1,4 @@
+node_modules/
+dotmanager
+*.log
+.DS_Store
