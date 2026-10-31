@@ -84,6 +84,19 @@ describe("adopt", () => {
     expect(readFileSync(join(dir, "services", "x.desktop"), "utf8")).toBe("x")
   })
 
+  test("adopts files inside read-only directories", () => {
+    const ctx = makeCtx()
+    const state = emptyState()
+    const dir = join(ctx.home, ".config", "fastfetch")
+    mkdirSync(dir, { recursive: true })
+    const file = join(dir, "config.json")
+    writeFileSync(file, "{}\n")
+    chmodSync(dir, 0o555)
+
+    expect(adopt(ctx, state, file).ok).toBe(true)
+    expect(lstatSync(file).isSymbolicLink()).toBe(true)
+  })
+
   test("skips backups when disabled", () => {
     const ctx = makeCtx({ backup: false })
     const state = emptyState()

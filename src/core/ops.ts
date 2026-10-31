@@ -70,7 +70,8 @@ export function adopt(
   if (!prepared.ok) return { ok: false, error: prepared.stderr || "git init failed" }
 
   let backupPath: string | null = null
-  let originalMode: number | null = null
+  let patchedPath: string | null = null
+  let patchedMode: number | null = null
   if (ctx.config.backup) {
     backupPath = join(ctx.paths.backupRoot, stamp(now), rel)
     try {
@@ -81,13 +82,16 @@ export function adopt(
     }
   }
 
-  if (stat.isDirectory()) {
-    const perms = stat.mode & 0o777
-    if ((perms & 0o200) === 0) {
-      originalMode = perms
-      chmodSync(absolute, perms | 0o200)
-    }
+  const widenBeforeMove = (target: string, isDir: boolean): void => {
+    const dir = isDir ? target : dirname(target)
+    const dirInfo = lstatSync(dir)
+    const dirPerms = dirInfo.mode & 0o777
+    if ((dirPerms & 0o200) !== 0) return
+    chmodSync(dir, dirPerms | 0o200)
+    patchedPath = dir
+    patchedMode = dirPerms
   }
+  widenBeforeMove(absolute, stat.isDirectory())
 
   let moved = false
   let linked = false
@@ -112,6 +116,13 @@ export function adopt(
     return { ok: true, message: `Adopted ${shown}`, item }
   } catch (error) {
     const notes: string[] = []
+    if (patchedPath !== null && patchedMode !== null) {
+      try {
+        chmodSync(patchedPath, patchedMode)
+      } catch {
+        notes.push("could not restore directory permissions")
+      }
+    }
     if (linked) {
       try {
         unlinkSync(absolute)
@@ -122,7 +133,6 @@ export function adopt(
     if (moved && existsSync(repoPath) && !existsSync(absolute)) {
       try {
         movePath(repoPath, absolute)
-        if (originalMode !== null) chmodSync(absolute, originalMode)
       } catch {
         notes.push("could not move content back from repo")
       }
