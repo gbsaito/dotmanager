@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { truncate } from "../src/ui/text.ts"
-import { clampIndex, listTree, windowSlice } from "../src/ui/tree.ts"
+import { clampIndex, listTree, managedRows, windowSlice } from "../src/ui/tree.ts"
 
 describe("listTree", () => {
   test("lists directories first and only descends into expanded ones", () => {
@@ -31,8 +31,40 @@ describe("listTree", () => {
   })
 })
 
-describe("windowSlice", () => {
-  test("keeps the selection inside a fixed window", () => {
+describe("managedRows", () => {
+  test("lists managed items as roots and descends into expanded ones", () => {
+    const root = mkdtempSync(join(tmpdir(), "dotmanager-managed-"))
+    const managedDir = join(root, "btop")
+    mkdirSync(managedDir)
+    writeFileSync(join(managedDir, "btop.conf"), "")
+    writeFileSync(join(root, ".zshrc"), "")
+
+    const items = [{ path: managedDir }, { path: join(root, ".zshrc") }]
+
+    const collapsed = managedRows(items, new Set())
+    expect(collapsed.map((row) => `${row.isRoot ? "root" : "child"}:${row.depth}:${row.name}`)).toEqual([
+      `root:0:${managedDir}`,
+      `root:0:${join(root, ".zshrc")}`,
+    ])
+
+    const expanded = managedRows(items, new Set([managedDir]))
+    expect(expanded.map((row) => `${row.depth}:${row.name}:${row.root}`)).toEqual([
+      `0:${managedDir}:${managedDir}`,
+      `1:btop.conf:${managedDir}`,
+      `0:${join(root, ".zshrc")}:${join(root, ".zshrc")}`,
+    ])
+  })
+
+  test("still lists managed paths that are missing from disk", () => {
+    const missing = join(tmpdir(), "dotmanager-does-not-exist-abc123")
+    const rows = managedRows([{ path: missing }], new Set())
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.isRoot).toBe(true)
+    expect(rows[0]?.isDir).toBe(false)
+  })
+})
+
+describe("windowSlice", () => {  test("keeps the selection inside a fixed window", () => {
     const rows = Array.from({ length: 10 }, (_, i) => i)
     expect(windowSlice(rows, 0, 3)).toEqual({ rows: [0, 1, 2], start: 0 })
     expect(windowSlice(rows, 5, 3)).toEqual({ rows: [4, 5, 6], start: 4 })

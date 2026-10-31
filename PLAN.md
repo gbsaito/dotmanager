@@ -28,9 +28,9 @@ src/
   ui/
     App.tsx        layout, keyboard handling, action dispatch
     Sidebar.tsx    file tree of $HOME
-    MainPanel.tsx  managed items
+    MainPanel.tsx  managed tree (managed items and their children)
     StatusPanel.tsx status, messages and input prompts
-    tree.ts        tree listing and window helpers
+    tree.ts        tree listings (files and managed items), window helpers
     theme.ts       palette and key hint text
     text.ts        truncation helper
 ```

@@ -4,8 +4,8 @@ Last updated: 2026-10-31
 
 ## Current task
 
-Phase 1 (core foundations) implementation is complete and waiting for the
-user's manual test. No phase 2 work has started.
+The managed panel is now an expandable tree, matching the files sidebar. It is
+waiting for the user's manual test. No phase 2 work has started.
 
 ## Done
 
@@ -21,16 +21,19 @@ user's manual test. No phase 2 work has started.
     commit, record, re-link on failure.
 - TUI:
   - file explorer for `$HOME` with expand/collapse and managed markers;
-  - managed panel with selection;
+  - managed panel as an expandable tree: managed items are root rows and their
+    children appear indented when expanded, with the same arrows, indentation
+    and selection behaviour as the files sidebar;
   - status panel with storage, remote, backup mode, last action, pending count,
     messages and key hints;
   - prompts for a custom path and for the git remote URL;
   - keyboard bindings: tab, j/k, arrows, h/l, space, enter, a, R, s, p, u, b,
-    r, q.
-- Tests: 15 tests covering path mapping, adopt (files, directories, no backup,
+    r, q. In the managed panel `h`/`l` and `enter` expand or collapse a
+    directory, while `space` still unmanages the selected managed item.
+- Tests: 19 tests covering path mapping, adopt (files, directories, no backup,
   conflict and duplicate rejection), unmanage (backup restore, repo restore,
-  refusal when the symlink was replaced) and git remote/push/sync against a
-  local bare repository.
+  refusal when the symlink was replaced), git remote/push/sync against a local
+  bare repository, tree listing for both panels, window slicing and truncation.
 - Verified the TUI boots and exits cleanly in a pseudo-terminal, and that
   adopting and unmanaging a file through the interface updates the filesystem
   and state as expected.
@@ -40,7 +43,7 @@ user's manual test. No phase 2 work has started.
 Commands:
 
 ```
-bun test          # 15 pass
+bun test          # 19 pass
 bun run typecheck # clean
 bun run start     # interactive TUI
 bun run build     # compiled single-file binary at ./dotmanager

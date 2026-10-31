@@ -8,7 +8,7 @@ import { displayPath } from "../core/util.ts"
 import { MainPanel } from "./MainPanel.tsx"
 import { StatusPanel, type PromptState } from "./StatusPanel.tsx"
 import { Sidebar } from "./Sidebar.tsx"
-import { clampIndex, listTree } from "./tree.ts"
+import { clampIndex, listTree, managedRows } from "./tree.ts"
 
 type Focus = "files" | "managed"
 type Message = { text: string; level: "info" | "error" }
@@ -29,11 +29,12 @@ export function App() {
 
   const rows = useMemo(() => listTree(ctx.home, expanded), [ctx.home, expanded])
   const managedPaths = useMemo(() => new Set(state.items.map((item) => item.path)), [state.items])
+  const managedTree = useMemo(() => managedRows(state.items, expanded), [state.items, expanded])
 
   const sIdx = clampIndex(sidebarIndex, rows.length)
-  const mIdx = clampIndex(mainIndex, state.items.length)
+  const mIdx = clampIndex(mainIndex, managedTree.length)
   const selectedRow = rows[sIdx]
-  const selectedItem = state.items[mIdx]
+  const selectedManaged = managedTree[mIdx]
 
   const statusHeight = Math.min(9, Math.max(5, height - 5))
   const mainHeight = Math.max(4, height - statusHeight)
@@ -61,7 +62,7 @@ export function App() {
     commitState(fresh)
     if (outcome.ok) {
       succeed(outcome.message)
-      setMainIndex(clampIndex(mIdx, fresh.items.length))
+      setMainIndex((current) => clampIndex(current, fresh.items.length))
     } else {
       fail(outcome.error)
     }
@@ -79,7 +80,7 @@ export function App() {
   const moveSelection = (delta: number) => {
     setMessage(null)
     if (focus === "files") setSidebarIndex(clampIndex(sIdx + delta, rows.length))
-    else setMainIndex(clampIndex(mIdx + delta, state.items.length))
+    else setMainIndex(clampIndex(mIdx + delta, managedTree.length))
   }
 
   const activate = (enter: boolean) => {
@@ -94,8 +95,10 @@ export function App() {
       } else {
         adoptPath(selectedRow.path)
       }
-    } else if (selectedItem) {
-      unmanagePath(selectedItem.path)
+    } else if (selectedManaged) {
+      // Enter mirrors the sidebar: directories expand, space is the toggle.
+      if (enter && selectedManaged.isDir) toggleExpanded(selectedManaged.path)
+      else if (selectedManaged.isRoot) unmanagePath(selectedManaged.path)
     }
   }
 
@@ -195,10 +198,14 @@ export function App() {
       case "left":
       case "h":
         if (focus === "files" && selectedRow?.isDir) toggleExpanded(selectedRow.path)
+        else if (focus === "managed" && selectedManaged?.isDir && expanded.has(selectedManaged.path))
+          toggleExpanded(selectedManaged.path)
         break
       case "right":
       case "l":
         if (focus === "files" && selectedRow?.isDir && !expanded.has(selectedRow.path)) toggleExpanded(selectedRow.path)
+        else if (focus === "managed" && selectedManaged?.isDir && !expanded.has(selectedManaged.path))
+          toggleExpanded(selectedManaged.path)
         break
       case "space":
         activate(false)
@@ -235,8 +242,8 @@ export function App() {
       ? selectedRow
         ? displayPath(selectedRow.path, ctx.home)
         : "nothing selected"
-      : selectedItem
-        ? displayPath(selectedItem.path, ctx.home)
+      : selectedManaged
+        ? displayPath(selectedManaged.path, ctx.home)
         : "nothing managed"
 
   return (
@@ -253,7 +260,8 @@ export function App() {
           expanded={expanded}
         />
         <MainPanel
-          items={state.items}
+          rows={managedTree}
+          itemCount={state.items.length}
           selected={mIdx}
           focused={focus === "managed"}
           width={Math.max(10, width - sidebarWidth)}
@@ -261,6 +269,7 @@ export function App() {
           home={ctx.home}
           storageLabel={displayPath(ctx.storage, ctx.home)}
           pending={state.pending.length}
+          expanded={expanded}
         />
       </box>
       <StatusPanel

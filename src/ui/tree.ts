@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs"
+import { lstatSync, readdirSync, statSync } from "node:fs"
 import { join } from "node:path"
 
 export type TreeRow = {
@@ -8,6 +8,9 @@ export type TreeRow = {
   isDir: boolean
   isSymlink: boolean
 }
+
+/** A row in the managed panel: a managed item, or one of its children. */
+export type ManagedRow = TreeRow & { root: string; isRoot: boolean }
 
 const MAX_ROWS = 2000
 
@@ -41,6 +44,49 @@ export function listTree(root: string, expanded: Set<string>): TreeRow[] {
   }
 
   walk(root, 0)
+  return rows
+}
+
+/**
+ * Managed panel rows: every managed item as a root row, followed by its
+ * children when the item is expanded. Mirrors `listTree` so both panels read
+ * and navigate the same way.
+ */
+export function managedRows(items: { path: string }[], expanded: Set<string>): ManagedRow[] {
+  const rows: ManagedRow[] = []
+
+  for (const item of items) {
+    if (rows.length >= MAX_ROWS) break
+
+    let isSymlink = false
+    let isDir = false
+    try {
+      const info = lstatSync(item.path)
+      isSymlink = info.isSymbolicLink()
+      if (isSymlink) {
+        try {
+          isDir = statSync(item.path).isDirectory()
+        } catch {
+          isDir = false
+        }
+      } else {
+        isDir = info.isDirectory()
+      }
+    } catch {
+      // A managed path can be missing from disk; still list it so it can be
+      // unmanaged from the panel.
+    }
+
+    rows.push({ path: item.path, name: item.path, depth: 0, isDir, isSymlink, root: item.path, isRoot: true })
+
+    if (isDir && expanded.has(item.path)) {
+      for (const child of listTree(item.path, expanded)) {
+        if (rows.length >= MAX_ROWS) break
+        rows.push({ ...child, depth: child.depth + 1, root: item.path, isRoot: false })
+      }
+    }
+  }
+
   return rows
 }
 
