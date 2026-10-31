@@ -41,10 +41,8 @@ export function MainPanel({ rows, itemCount, selected, focused, height, width, s
         view.rows.map((row, offset) => {
           const index = view.start + offset
           const isSelected = index === selected
-          const marker = row.managed ? "●" : " "
-          const arrow = row.toggle ? (row.open ? "▾ " : "▸ ") : "  "
           const suffix = row.isSymlink && !row.managed ? " →" : ""
-          const line = `${marker}${arrow}${"  ".repeat(row.depth)}${row.name}${suffix}`
+          const line = `${"  ".repeat(row.depth)}${row.name}${suffix}`
           const color = row.managed
             ? colors.success
             : row.isDir
