@@ -86,8 +86,14 @@ export function App() {
     setMessage(null)
     if (focus === "files") {
       if (!selectedRow) return
-      if (enter && selectedRow.isDir) toggleExpanded(selectedRow.path)
-      else adoptPath(selectedRow.path)
+      // Space is the spec's toggle: a managed path unmanages, anything else adopts.
+      if (managedPaths.has(selectedRow.path)) {
+        unmanagePath(selectedRow.path)
+      } else if (enter && selectedRow.isDir) {
+        toggleExpanded(selectedRow.path)
+      } else {
+        adoptPath(selectedRow.path)
+      }
     } else if (selectedItem) {
       unmanagePath(selectedItem.path)
     }

@@ -78,8 +78,8 @@ below. The focused panel has a highlighted border and selected row.
 | k / up    | move selection up                                 |
 | h / left  | collapse the selected directory                   |
 | l / right | expand the selected directory                     |
-| space     | adopt the selected path, or unmanage selected item |
-| enter     | expand a directory, adopt a file, or unmanage     |
+| space     | toggle the selected path: adopt it, or unmanage when managed |
+| enter     | expand a directory, adopt a file, or unmanage a managed path |
 | a         | adopt a typed path                                |
 | R         | set the git remote URL                            |
 | s         | pull then push                                    |
