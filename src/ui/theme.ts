@@ -11,6 +11,7 @@ export type Colors = {
   error: string
   selection: string
   selectionFocused: string
+  selectionText: string
 }
 
 export const colors: Colors = {
@@ -18,13 +19,14 @@ export const colors: Colors = {
   panel: "#181825",
   border: "#45475a",
   borderFocused: "#89b4fa",
-  text: "#cdd6f4",
-  muted: "#6c7086",
+  text: "#e6e9f5",
+  muted: "#9399b2",
   accent: "#89b4fa",
   success: "#a6e3a1",
   error: "#f38ba8",
   selection: "#313244",
   selectionFocused: "#45475a",
+  selectionText: "#ffffff",
 }
 
 export const HELP_HINT =

@@ -47,8 +47,8 @@ export function MainPanel({ items, selected, focused, height, width, home, stora
           return (
             <text
               key={item.path}
-              fg={isSelected ? colors.bg : colors.text}
-              bg={isSelected ? (focused ? colors.accent : colors.selection) : undefined}
+              fg={isSelected ? colors.selectionText : colors.text}
+              bg={isSelected ? (focused ? colors.selectionFocused : colors.selection) : undefined}
               content={truncate(line, textWidth)}
             />
           )
