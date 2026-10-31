@@ -4,8 +4,10 @@ Last updated: 2026-10-31
 
 ## Current task
 
-The managed panel is now an expandable tree, matching the files sidebar. It is
-waiting for the user's manual test. No phase 2 work has started.
+The managed panel is now a directory tree grouped by real paths (`.config >
+fastfetch`, `.local > share > wireplumber`), with the same navigation as the
+files sidebar. It is waiting for the user's manual test. No phase 2 work has
+started.
 
 ## Done
 
@@ -21,15 +23,16 @@ waiting for the user's manual test. No phase 2 work has started.
     commit, record, re-link on failure.
 - TUI:
   - file explorer for `$HOME` with expand/collapse and managed markers;
-  - managed panel as an expandable tree: managed items are root rows and their
-    children appear indented when expanded, with the same arrows, indentation
-    and selection behaviour as the files sidebar;
+  - managed panel as a directory tree grouped by real paths: managed items are
+    nested under their path segments (`.config > fastfetch`,
+    `.local > share > wireplumber`), scaffolding groups start expanded and can
+    be collapsed, and managed directories expand into their contents;
   - status panel with storage, remote, backup mode, last action, pending count,
     messages and key hints;
   - prompts for a custom path and for the git remote URL;
   - keyboard bindings: tab, j/k, arrows, h/l, space, enter, a, R, s, p, u, b,
-    r, q. In the managed panel `h`/`l` and `enter` expand or collapse a
-    directory, while `space` still unmanages the selected managed item.
+    r, q. In the managed panel `h`/`l` and `enter` expand or collapse a group
+    or directory, while `space` still unmanages the selected managed item.
 - Tests: 19 tests covering path mapping, adopt (files, directories, no backup,
   conflict and duplicate rejection), unmanage (backup restore, repo restore,
   refusal when the symlink was replaced), git remote/push/sync against a local

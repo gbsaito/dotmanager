@@ -28,9 +28,9 @@ src/
   ui/
     App.tsx        layout, keyboard handling, action dispatch
     Sidebar.tsx    file tree of $HOME
-    MainPanel.tsx  managed tree (managed items and their children)
+    MainPanel.tsx  managed tree grouped by real paths
     StatusPanel.tsx status, messages and input prompts
-    tree.ts        tree listings (files and managed items), window helpers
+    tree.ts        tree listings (files and managed paths), window helpers
     theme.ts       palette and key hint text
     text.ts        truncation helper
 ```
@@ -70,6 +70,14 @@ A failure at any step rolls the filesystem back to its original layout.
 
 Layout A: file explorer on the left, managed list on the right, status bar
 below. The focused panel has a highlighted border and selected row.
+
+The managed panel is a directory tree grouped by real paths, so
+`~/.config/fastfetch` renders as `.config > fastfetch` and
+`~/.local/share/wireplumber` as `.local > share > wireplumber`. Path segments
+that are not managed themselves (`.config`, `.local`, `share`) are scaffolding
+groups: they start expanded and can be collapsed. Managed items are marked with
+`●`, and managed directories expand into their contents with `h`/`l` or
+`enter`.
 
 | Key       | Action                                            |
 | --------- | ------------------------------------------------- |

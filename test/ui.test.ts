@@ -32,35 +32,66 @@ describe("listTree", () => {
 })
 
 describe("managedRows", () => {
-  test("lists managed items as roots and descends into expanded ones", () => {
-    const root = mkdtempSync(join(tmpdir(), "dotmanager-managed-"))
-    const managedDir = join(root, "btop")
-    mkdirSync(managedDir)
-    writeFileSync(join(managedDir, "btop.conf"), "")
-    writeFileSync(join(root, ".zshrc"), "")
+  test("groups managed items into their real path hierarchy", () => {
+    const home = mkdtempSync(join(tmpdir(), "dotmanager-managed-"))
+    const config = join(home, ".config")
+    const fastfetch = join(config, "fastfetch")
+    const local = join(home, ".local")
+    const share = join(local, "share")
+    const wireplumber = join(share, "wireplumber")
+    mkdirSync(fastfetch, { recursive: true })
+    writeFileSync(join(fastfetch, "config.jsonc"), "")
+    mkdirSync(wireplumber, { recursive: true })
+    writeFileSync(join(home, ".zshrc"), "")
 
-    const items = [{ path: managedDir }, { path: join(root, ".zshrc") }]
+    const items = [{ path: fastfetch }, { path: wireplumber }, { path: join(home, ".zshrc") }]
 
-    const collapsed = managedRows(items, new Set())
-    expect(collapsed.map((row) => `${row.isRoot ? "root" : "child"}:${row.depth}:${row.name}`)).toEqual([
-      `root:0:${managedDir}`,
-      `root:0:${join(root, ".zshrc")}`,
+    const collapsed = managedRows(items, home, new Set())
+    expect(collapsed.map((row) => `${row.depth}:${row.name}:${row.managed ? "managed" : "group"}`)).toEqual([
+      `0:.config:group`,
+      `1:fastfetch:managed`,
+      `0:.local:group`,
+      `1:share:group`,
+      `2:wireplumber:managed`,
+      `0:.zshrc:managed`,
     ])
 
-    const expanded = managedRows(items, new Set([managedDir]))
-    expect(expanded.map((row) => `${row.depth}:${row.name}:${row.root}`)).toEqual([
-      `0:${managedDir}:${managedDir}`,
-      `1:btop.conf:${managedDir}`,
-      `0:${join(root, ".zshrc")}:${join(root, ".zshrc")}`,
+    const expanded = managedRows(items, home, new Set([fastfetch]))
+    expect(expanded.map((row) => `${row.depth}:${row.name}`)).toEqual([
+      "0:.config",
+      "1:fastfetch",
+      "2:config.jsonc",
+      "0:.local",
+      "1:share",
+      "2:wireplumber",
+      "0:.zshrc",
     ])
+
+    const collapsedConfig = managedRows(items, home, new Set(), new Set([config]))
+    expect(collapsedConfig.map((row) => `${row.depth}:${row.name}`)).toEqual([
+      "0:.config",
+      "0:.local",
+      "1:share",
+      "2:wireplumber",
+      "0:.zshrc",
+    ])
+    expect(collapsedConfig[0]?.open).toBe(false)
   })
 
   test("still lists managed paths that are missing from disk", () => {
-    const missing = join(tmpdir(), "dotmanager-does-not-exist-abc123")
-    const rows = managedRows([{ path: missing }], new Set())
+    const home = "/home/example"
+    const missing = join(home, ".config", "gone")
+    const rows = managedRows([{ path: missing }], home, new Set())
+    expect(rows.map((row) => `${row.name}:${row.managed}`)).toEqual([".config:false", "gone:true"])
+  })
+
+  test("keeps paths outside home as a single row", () => {
+    const home = "/home/example"
+    const external = "/srv/thing"
+    const rows = managedRows([{ path: external }], home, new Set())
     expect(rows).toHaveLength(1)
-    expect(rows[0]?.isRoot).toBe(true)
-    expect(rows[0]?.isDir).toBe(false)
+    expect(rows[0]?.name).toBe(external)
+    expect(rows[0]?.managed).toBe(true)
   })
 })
 

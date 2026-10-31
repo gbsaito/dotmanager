@@ -8,7 +8,7 @@ import { displayPath } from "../core/util.ts"
 import { MainPanel } from "./MainPanel.tsx"
 import { StatusPanel, type PromptState } from "./StatusPanel.tsx"
 import { Sidebar } from "./Sidebar.tsx"
-import { clampIndex, listTree, managedRows } from "./tree.ts"
+import { clampIndex, listTree, managedRows, type ManagedRow } from "./tree.ts"
 
 type Focus = "files" | "managed"
 type Message = { text: string; level: "info" | "error" }
@@ -24,12 +24,16 @@ export function App() {
   const [sidebarIndex, setSidebarIndex] = useState(0)
   const [mainIndex, setMainIndex] = useState(0)
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set())
   const [prompt, setPrompt] = useState<PromptState | null>(null)
   const [message, setMessage] = useState<Message | null>(null)
 
   const rows = useMemo(() => listTree(ctx.home, expanded), [ctx.home, expanded])
   const managedPaths = useMemo(() => new Set(state.items.map((item) => item.path)), [state.items])
-  const managedTree = useMemo(() => managedRows(state.items, expanded), [state.items, expanded])
+  const managedTree = useMemo(
+    () => managedRows(state.items, ctx.home, expanded, collapsed),
+    [state.items, ctx.home, expanded, collapsed],
+  )
 
   const sIdx = clampIndex(sidebarIndex, rows.length)
   const mIdx = clampIndex(mainIndex, managedTree.length)
@@ -77,6 +81,21 @@ export function App() {
     })
   }
 
+  const toggleCollapsed = (path: string) => {
+    setCollapsed((previous) => {
+      const next = new Set(previous)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      return next
+    })
+  }
+
+  /** Open or close a managed row: real directories use `expanded`, groups use `collapsed`. */
+  const toggleManagedRow = (row: ManagedRow) => {
+    if (row.managed) toggleExpanded(row.path)
+    else toggleCollapsed(row.path)
+  }
+
   const moveSelection = (delta: number) => {
     setMessage(null)
     if (focus === "files") setSidebarIndex(clampIndex(sIdx + delta, rows.length))
@@ -97,8 +116,8 @@ export function App() {
       }
     } else if (selectedManaged) {
       // Enter mirrors the sidebar: directories expand, space is the toggle.
-      if (enter && selectedManaged.isDir) toggleExpanded(selectedManaged.path)
-      else if (selectedManaged.isRoot) unmanagePath(selectedManaged.path)
+      if (enter && selectedManaged.toggle) toggleManagedRow(selectedManaged)
+      else if (selectedManaged.managed) unmanagePath(selectedManaged.path)
     }
   }
 
@@ -198,14 +217,12 @@ export function App() {
       case "left":
       case "h":
         if (focus === "files" && selectedRow?.isDir) toggleExpanded(selectedRow.path)
-        else if (focus === "managed" && selectedManaged?.isDir && expanded.has(selectedManaged.path))
-          toggleExpanded(selectedManaged.path)
+        else if (focus === "managed" && selectedManaged?.toggle && selectedManaged.open) toggleManagedRow(selectedManaged)
         break
       case "right":
       case "l":
         if (focus === "files" && selectedRow?.isDir && !expanded.has(selectedRow.path)) toggleExpanded(selectedRow.path)
-        else if (focus === "managed" && selectedManaged?.isDir && !expanded.has(selectedManaged.path))
-          toggleExpanded(selectedManaged.path)
+        else if (focus === "managed" && selectedManaged?.toggle && !selectedManaged.open) toggleManagedRow(selectedManaged)
         break
       case "space":
         activate(false)
@@ -266,10 +283,8 @@ export function App() {
           focused={focus === "managed"}
           width={Math.max(10, width - sidebarWidth)}
           height={mainHeight}
-          home={ctx.home}
           storageLabel={displayPath(ctx.storage, ctx.home)}
           pending={state.pending.length}
-          expanded={expanded}
         />
       </box>
       <StatusPanel

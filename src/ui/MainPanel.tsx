@@ -1,4 +1,3 @@
-import { displayPath } from "../core/util.ts"
 import { truncate } from "./text.ts"
 import { colors } from "./theme.ts"
 import { windowSlice, type ManagedRow } from "./tree.ts"
@@ -10,13 +9,11 @@ type MainPanelProps = {
   focused: boolean
   height: number
   width: number
-  home: string
   storageLabel: string
   pending: number
-  expanded: Set<string>
 }
 
-export function MainPanel({ rows, itemCount, selected, focused, height, width, home, storageLabel, pending, expanded }: MainPanelProps) {
+export function MainPanel({ rows, itemCount, selected, focused, height, width, storageLabel, pending }: MainPanelProps) {
   const inner = Math.max(0, height - 4)
   const view = windowSlice(rows, selected, inner)
   const textWidth = Math.max(10, width - 4)
@@ -44,11 +41,17 @@ export function MainPanel({ rows, itemCount, selected, focused, height, width, h
         view.rows.map((row, offset) => {
           const index = view.start + offset
           const isSelected = index === selected
-          const arrow = row.isDir ? (expanded.has(row.path) ? "▾ " : "▸ ") : "  "
-          const label = row.isRoot ? displayPath(row.path, home) : row.name
-          const suffix = row.isSymlink && !row.isRoot ? " →" : ""
-          const line = `${arrow}${"  ".repeat(row.depth)}${label}${suffix}`
-          const color = row.isRoot ? colors.success : row.isDir ? colors.accent : row.isSymlink ? colors.muted : colors.text
+          const marker = row.managed ? "●" : " "
+          const arrow = row.toggle ? (row.open ? "▾ " : "▸ ") : "  "
+          const suffix = row.isSymlink && !row.managed ? " →" : ""
+          const line = `${marker}${arrow}${"  ".repeat(row.depth)}${row.name}${suffix}`
+          const color = row.managed
+            ? colors.success
+            : row.isDir
+              ? colors.accent
+              : row.isSymlink
+                ? colors.muted
+                : colors.text
           return (
             <text
               key={`${row.path}:${index}`}
