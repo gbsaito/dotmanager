@@ -30,4 +30,4 @@ export const colors: Colors = {
 }
 
 export const HELP_HINT =
-  "tab focus · space adopt/unmanage · s sync · p push · u pull · R remote · a add path · b backup · r reload · q quit"
+  "tab focus · space adopt/unmanage · s sync · p push · u pull · R remote · A restore · a add path · b backup · r reload · q quit"

@@ -1,4 +1,4 @@
-import { accessSync, chmodSync, cpSync, constants, existsSync, lstatSync, mkdirSync, readlinkSync, renameSync, rmSync, symlinkSync, unlinkSync } from "node:fs"
+import { accessSync, chmodSync, cpSync, constants, existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import type { Ctx } from "./config.ts"
 import { commitAll, ensureRepo, git, isRepo } from "./git.ts"
@@ -11,6 +11,55 @@ export type OpOutcome =
 
 function stamp(date: Date): string {
   return date.toISOString().replace(/[:.]/g, "-")
+}
+
+/** Manifest committed in the repo root so another machine can rebuild the links. */
+export const MANIFEST_NAME = "dotmanager.json"
+
+const EXTERNAL_PREFIX = "_external/"
+
+/** Write the list of managed repo paths into the repo. */
+export function writeManifest(storage: string, repoPaths: string[]): void {
+  const items = [...new Set(repoPaths)].sort()
+  writeFileSync(join(storage, MANIFEST_NAME), `${JSON.stringify({ version: 1, items }, null, 2)}\n`, "utf8")
+}
+
+/** Read the managed repo paths from the repo manifest, if it has one. */
+export function readManifest(storage: string): string[] | null {
+  const path = join(storage, MANIFEST_NAME)
+  if (!existsSync(path)) return null
+  try {
+    const raw = JSON.parse(readFileSync(path, "utf8")) as { items?: unknown }
+    if (!Array.isArray(raw.items)) return null
+    return raw.items.filter((entry): entry is string => typeof entry === "string")
+  } catch {
+    return null
+  }
+}
+
+function snapshotManifest(ctx: Ctx): string | null {
+  const path = join(ctx.storage, MANIFEST_NAME)
+  return existsSync(path) ? readFileSync(path, "utf8") : null
+}
+
+function restoreManifest(ctx: Ctx, previous: string | null): void {
+  const path = join(ctx.storage, MANIFEST_NAME)
+  try {
+    if (previous === null) {
+      if (existsSync(path)) rmSync(path, { force: true })
+    } else {
+      writeFileSync(path, previous, "utf8")
+    }
+  } catch {
+    // Best effort: the manifest is rewritten on the next operation anyway.
+  }
+}
+
+/** Where a repo path belongs on this machine. */
+export function homePathForRepoPath(repoPath: string, home: string): string {
+  const normalized = repoPath.split("\\").join("/")
+  if (normalized.startsWith(EXTERNAL_PREFIX)) return `/${normalized.slice(EXTERNAL_PREFIX.length)}`
+  return join(home, normalized)
 }
 
 /** Move with a copy+delete fallback for cross-device setups. */
@@ -105,12 +154,14 @@ export function adopt(
 
   let moved = false
   let linked = false
+  const manifestBefore = snapshotManifest(ctx)
   try {
     movePath(absolute, repoPath)
     moved = true
     makeSymlink(repoPath, absolute)
     linked = true
 
+    writeManifest(ctx.storage, [...state.items.map((entry) => entry.repoPath), rel])
     const commit = commitAll(ctx.storage, `adopt: ${rel}`)
     if (!commit.ok) throw new Error(commit.error)
 
@@ -126,6 +177,7 @@ export function adopt(
     return { ok: true, message: `Adopted ${shown}`, item }
   } catch (error) {
     const notes: string[] = []
+    restoreManifest(ctx, manifestBefore)
     if (patchedPath !== null && patchedMode !== null) {
       try {
         chmodSync(patchedPath, patchedMode)
@@ -177,6 +229,7 @@ export function unmanage(
   const repoPath = join(ctx.storage, item.repoPath)
   let linked = false
   let restored: "backup" | "repo" | null = null
+  const manifestBefore = snapshotManifest(ctx)
 
   if (existsSync(absolutePath) || isDanglingSymlink(absolutePath)) {
     const stat = lstatSync(absolutePath)
@@ -203,6 +256,7 @@ export function unmanage(
     }
 
     if (existsSync(repoPath)) rmSync(repoPath, { recursive: true, force: true })
+    writeManifest(ctx.storage, state.items.filter((entry) => entry.path !== absolutePath).map((entry) => entry.repoPath))
     const commit = commitAll(ctx.storage, `unmanage: ${item.repoPath}`)
     if (!commit.ok) throw new Error(commit.error)
 
@@ -226,8 +280,71 @@ export function unmanage(
         // Best effort; the error below still reports the failure.
       }
     }
+    restoreManifest(ctx, manifestBefore)
     return { ok: false, error: `unmanage failed: ${(error as Error).message}` }
   }
+}
+
+/**
+ * Restore managed entries from the repo into $HOME as symlinks. Rebuilds
+ * `state.items` from the repo manifest (falling back to the local state) and
+ * backs up any real file it replaces. Runs after a pull or on demand with the
+ * new `A` key.
+ */
+export function apply(ctx: Ctx, state: State, now: Date = new Date()): OpOutcome & { restored: number; skipped: string[] } {
+  if (!isRepo(ctx.storage)) return { ok: false, error: "storage is not a git repository yet", restored: 0, skipped: [] }
+
+  const repoPaths = readManifest(ctx.storage) ?? state.items.map((entry) => entry.repoPath)
+  if (repoPaths.length === 0) {
+    return { ok: false, error: "nothing to restore: the repo has no dotmanager.json manifest", restored: 0, skipped: [] }
+  }
+
+  const restored: ManagedItem[] = []
+  const skipped: string[] = []
+
+  for (const repoPath of repoPaths) {
+    const repoCopy = join(ctx.storage, repoPath)
+    if (!existsSync(repoCopy)) {
+      skipped.push(repoPath)
+      continue
+    }
+    const target = homePathForRepoPath(repoPath, ctx.home)
+    const shown = displayPath(target, ctx.home)
+
+    let backupPath: string | null = null
+    try {
+      const stat = existsSync(target) || isDanglingSymlink(target) ? lstatSync(target) : null
+      if (stat) {
+        if (stat.isSymbolicLink()) {
+          unlinkSync(target)
+        } else {
+          if (!ctx.config.backup) {
+            skipped.push(shown)
+            continue
+          }
+          backupPath = join(ctx.paths.backupRoot, stamp(now), repoPath)
+          mkdirSync(dirname(backupPath), { recursive: true })
+          cpSync(target, backupPath, { recursive: true, preserveTimestamps: true, verbatimSymlinks: true })
+          rmSync(target, { recursive: true, force: true })
+        }
+      }
+      makeSymlink(repoCopy, target)
+      restored.push({ path: target, repoPath, addedAt: now.toISOString(), backupPath });
+    } catch (error) {
+      skipped.push(`${shown}: ${(error as Error).message}`)
+    }
+  }
+
+  if (restored.length === 0) {
+    return { ok: false, error: `nothing restored${skipped.length > 0 ? ` (${skipped.join(", ")})` : ""}`, restored: 0, skipped }
+  }
+
+  const restoredPaths = new Set(restored.map((item) => item.path))
+  const kept = state.items.filter((item) => !restoredPaths.has(item.path))
+  state.items = [...kept, ...restored]
+
+  const skippedNote = skipped.length > 0 ? `, skipped ${skipped.length}` : ""
+  return { ok: true, message: `Restored ${restored.length} items${skippedNote}`, restored: restored.length, skipped };
 }
 
 function isDanglingSymlink(path: string): boolean {

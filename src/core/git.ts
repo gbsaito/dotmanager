@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync } from "node:fs"
-import { join } from "node:path"
+import { existsSync, mkdirSync, readdirSync } from "node:fs"
+import { basename, dirname, join } from "node:path"
 
 export type GitResult = { ok: boolean; stdout: string; stderr: string }
 
@@ -77,6 +77,36 @@ export function setRemote(storage: string, url: string): GitResult {
 export function pull(storage: string): GitResult {
   const branch = run(storage, ["branch", "--show-current"]).stdout || "main"
   return run(storage, ["pull", "--rebase", "origin", branch])
+}
+
+/** True once the repo has at least one commit. */
+export function hasCommits(storage: string): boolean {
+  return run(storage, ["rev-parse", "--verify", "HEAD"]).ok
+}
+
+export function cloneInto(storage: string, url: string): GitResult {
+  if (existsSync(storage) && readdirSync(storage).length > 0) {
+    return { ok: false, stdout: "", stderr: `${storage} already exists and is not empty; move it aside before cloning` }
+  }
+  return run(dirname(storage), ["clone", url, basename(storage)])
+}
+
+/**
+ * Point the storage repo at `url`. A fresh machine clones the remote; an
+ * existing repo just swaps the remote and, when it has no commits yet, pulls
+ * the remote branch into it.
+ */
+export function connectRemote(storage: string, url: string): GitResult {
+  if (isRepo(storage)) {
+    const set = setRemote(storage, url)
+    if (!set.ok) return set
+    if (hasCommits(storage)) return { ok: true, stdout: "", stderr: "" }
+    return pull(storage)
+  }
+  if (existsSync(storage) && readdirSync(storage).length > 0) {
+    return { ok: false, stdout: "", stderr: `${storage} already exists and is not a git repository; move it aside first` }
+  }
+  return cloneInto(storage, url)
 }
 
 export function push(storage: string): GitResult {

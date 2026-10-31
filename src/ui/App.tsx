@@ -1,8 +1,8 @@
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react"
 import { useMemo, useState } from "react"
 import { createCtx, saveConfig, type Config } from "../core/config.ts"
-import { ensureRepo, isRepo, pull, push, setRemote, sync } from "../core/git.ts"
-import { adopt, unmanage } from "../core/ops.ts"
+import { ensureRepo, isRepo, pull, push, setRemote, sync, connectRemote } from "../core/git.ts"
+import { adopt, apply, unmanage } from "../core/ops.ts"
 import { loadState, recordAction, saveState, type State } from "../core/state.ts"
 import { displayPath } from "../core/util.ts"
 import { MainPanel } from "./MainPanel.tsx"
@@ -129,6 +129,14 @@ export function App() {
     succeed(`Backups ${next.backup ? "enabled" : "disabled"}`)
   }
 
+  const runApply = () => {
+    const fresh = loadState(ctx.paths.statePath)
+    const restored = apply(ctx, fresh)
+    commitState(fresh)
+    if (restored.ok) succeed(restored.message)
+    else fail(restored.error)
+  }
+
   const runGit = (kind: "sync" | "push" | "pull") => {
     const prepared = ensureRepo(ctx.storage)
     if (!prepared.ok) return fail(prepared.stderr || "git init failed")
@@ -140,11 +148,16 @@ export function App() {
     if (!result.ok) return fail(result.stderr || `git ${kind} failed`)
 
     const fresh = loadState(ctx.paths.statePath)
+    let note = ""
+    if (kind !== "push") {
+      const restored = apply(ctx, fresh)
+      if (restored.ok) note = ` · ${restored.message}`
+    }
     if (kind !== "pull") fresh.pending = []
     const text = kind === "sync" ? "Synced with remote" : kind === "push" ? "Pushed to remote" : "Pulled from remote"
     recordAction(fresh, "info", text)
     commitState(fresh)
-    succeed(text)
+    succeed(text + note)
   }
 
   const submitPrompt = (value: string) => {
@@ -158,16 +171,17 @@ export function App() {
       return
     }
 
-    const prepared = ensureRepo(ctx.storage)
-    if (!prepared.ok) return fail(prepared.stderr || "git init failed")
-    const remote = setRemote(ctx.storage, trimmed)
-    if (!remote.ok) return fail(remote.stderr || "could not set the remote")
+    const connected = connectRemote(ctx.storage, trimmed)
+    if (!connected.ok) return fail(connected.stderr || "could not connect the remote")
 
     const next = { ...ctx.config, remote: trimmed }
     ctx.config = next
     setConfig(next)
     saveConfig(ctx.paths, next)
-    succeed(`Remote set to ${trimmed}`)
+    const fresh = loadState(ctx.paths.statePath)
+    const restored = apply(ctx, fresh)
+    commitState(fresh)
+    succeed(`Remote set to ${trimmed}${restored.ok ? ` · ${restored.message}` : ""}`)
   }
 
   const openPrompt = (kind: PromptState["kind"]) => {
@@ -198,6 +212,12 @@ export function App() {
     // Terminals report shift+r as either "R" (raw) or "r" + shift (kitty protocol).
     if (key.name === "R" || (key.name.toLowerCase() === "r" && key.shift)) {
       openPrompt("remote")
+      return
+    }
+
+    // Terminals report shift+a as either "A" (raw) or "a" + shift (kitty protocol).
+    if (key.name === "A" || (key.name.toLowerCase() === "a" && key.shift)) {
+      runApply()
       return
     }
 

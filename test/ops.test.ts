@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { defaultConfig, resolvePaths, type Ctx } from "../src/core/config.ts"
 import { getRemote, isRepo, push, setRemote, sync } from "../src/core/git.ts"
-import { adopt, unmanage } from "../src/core/ops.ts"
+import { adopt, apply, unmanage, writeManifest } from "../src/core/ops.ts"
 import { emptyState } from "../src/core/state.ts"
 import { displayPath, repoRelativePath } from "../src/core/util.ts"
 
@@ -222,5 +222,81 @@ describe("git storage", () => {
     expect(adopt(ctx, state, second).ok).toBe(true)
     expect(sync(ctx.storage).ok).toBe(true)
     expect(readFileSync(join(cloneDir, ".vimrc"), "utf8")).toBe("set number")
+  })
+})
+
+describe("apply", () => {
+  test("rebuilds managed symlinks from the repo manifest", () => {
+    const ctx = makeCtx()
+    expect(Bun.spawnSync(["git", "init", "--initial-branch=main", ctx.storage]).exitCode).toBe(0)
+    const state = emptyState()
+    const repoPath = join(".config", "fastfetch")
+    writeManifest(ctx.storage, [repoPath])
+    expect(existsSync(join(ctx.storage, repoPath))).toBe(false)
+
+    const dir = join(ctx.home, ".config", "fastfetch")
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, "config.jsonc"), "{ colors.primary: blue }")
+    mkdirSync(join(ctx.storage, ".config", "fastfetch"), { recursive: true })
+    writeFileSync(join(ctx.storage, repoPath, "config.jsonc"), "{ colors.primary: blue }")
+
+    const result = apply(ctx, state)
+    if (!result.ok) console.log("APPLY-ERR", result)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.restored).toBe(1)
+
+    const item = state.items[0]!
+    expect(item.repoPath).toBe(repoPath)
+    expect(lstatSync(dir).isSymbolicLink()).toBe(true)
+    expect(readlinkSync(dir)).toBe(join(ctx.storage, repoPath))
+    expect(readFileSync(join(dir, "config.jsonc"), "utf8")).toBe("{ colors.primary: blue }")
+  })
+
+  test("backs up real content before linking it back", () => {
+    const ctx = makeCtx()
+    expect(Bun.spawnSync(["git", "init", "--initial-branch=main", ctx.storage]).exitCode).toBe(0)
+    const state = emptyState()
+    const repoPath = join(".config", "btop")
+    writeManifest(ctx.storage, [repoPath])
+    mkdirSync(join(ctx.storage, ".config", "btop"), { recursive: true })
+    writeFileSync(join(ctx.storage, repoPath, "btop.conf"), "old-theme")
+
+    const dir = join(ctx.home, ".config", "btop")
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, "btop.conf"), "machine-specific")
+
+    const result = apply(ctx, state)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const item = state.items.find((entry) => entry.repoPath === repoPath)!
+    expect(item.backupPath).toBeTruthy()
+    expect(readFileSync(join(item.backupPath!, "btop.conf"), "utf8")).toBe("machine-specific")
+    expect(readFileSync(join(dir, "btop.conf"), "utf8")).toBe("old-theme")
+  })
+
+  test("skips entries when backups are disabled", () => {
+    const ctx = makeCtx({ backup: false })
+    expect(Bun.spawnSync(["git", "init", "--initial-branch=main", ctx.storage]).exitCode).toBe(0)
+    const state = emptyState()
+    const repoPath = join(".config", "kovidgoyal")
+    writeManifest(ctx.storage, [repoPath])
+    mkdirSync(join(ctx.storage, ".config", "kovidgoyal"), { recursive: true })
+    writeFileSync(join(ctx.storage, repoPath, "kitty.conf"), "kitty-theme")
+
+    const dir = join(ctx.home, ".config", "kovidgoyal")
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, "kitty.conf"), "user-locals")
+
+    const result = apply(ctx, state)
+    expect(result.ok).toBe(false)
+    expect(result.ok ? "" : result.error).toContain("nothing restored")
+  })
+
+  test("refuses to restore without a manifest or managed items", () => {
+    const ctx = makeCtx()
+    const state = emptyState()
+    expect(apply(ctx, state).ok).toBe(false)
   })
 })
