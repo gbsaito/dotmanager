@@ -1,4 +1,4 @@
-import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, readlinkSync, renameSync, rmSync, symlinkSync, unlinkSync } from "node:fs"
+import { accessSync, chmodSync, cpSync, constants, existsSync, lstatSync, mkdirSync, readlinkSync, renameSync, rmSync, symlinkSync, unlinkSync } from "node:fs"
 import { dirname, join } from "node:path"
 import type { Ctx } from "./config.ts"
 import { commitAll, ensureRepo, git, isRepo } from "./git.ts"
@@ -92,6 +92,16 @@ export function adopt(
     patchedMode = dirPerms
   }
   widenBeforeMove(absolute, stat.isDirectory())
+  const moveGate = stat.isDirectory() ? absolute : dirname(absolute)
+  try {
+    accessSync(moveGate, constants.W_OK)
+  } catch {
+    const owner = lstatSync(moveGate).uid
+    return {
+      ok: false,
+      error: `permission denied: ${displayPath(absolute, ctx.home)} is not writable by the current user (dir owned by ${owner}); fix ownership or run dotmanager with elevated privileges to adopt it`,
+    }
+  }
 
   let moved = false
   let linked = false
