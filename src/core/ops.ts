@@ -1,4 +1,4 @@
-import { cpSync, existsSync, lstatSync, mkdirSync, readlinkSync, renameSync, rmSync, symlinkSync, unlinkSync } from "node:fs"
+import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, readlinkSync, renameSync, rmSync, symlinkSync, unlinkSync } from "node:fs"
 import { dirname, join } from "node:path"
 import type { Ctx } from "./config.ts"
 import { commitAll, ensureRepo, git, isRepo } from "./git.ts"
@@ -70,6 +70,7 @@ export function adopt(
   if (!prepared.ok) return { ok: false, error: prepared.stderr || "git init failed" }
 
   let backupPath: string | null = null
+  let originalMode: number | null = null
   if (ctx.config.backup) {
     backupPath = join(ctx.paths.backupRoot, stamp(now), rel)
     try {
@@ -77,6 +78,14 @@ export function adopt(
       cpSync(absolute, backupPath, { recursive: true, preserveTimestamps: true, verbatimSymlinks: true })
     } catch (error) {
       return { ok: false, error: `backup failed: ${(error as Error).message}` }
+    }
+  }
+
+  if (stat.isDirectory()) {
+    const perms = stat.mode & 0o777
+    if ((perms & 0o200) === 0) {
+      originalMode = perms
+      chmodSync(absolute, perms | 0o200)
     }
   }
 
@@ -113,6 +122,7 @@ export function adopt(
     if (moved && existsSync(repoPath) && !existsSync(absolute)) {
       try {
         movePath(repoPath, absolute)
+        if (originalMode !== null) chmodSync(absolute, originalMode)
       } catch {
         notes.push("could not move content back from repo")
       }

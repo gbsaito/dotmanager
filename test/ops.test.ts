@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, writeFileSync } from "node:fs"
+import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { defaultConfig, resolvePaths, type Ctx } from "../src/core/config.ts"
@@ -69,6 +69,19 @@ describe("adopt", () => {
     expect(adopt(ctx, state, dir).ok).toBe(true)
     expect(lstatSync(dir).isSymbolicLink()).toBe(true)
     expect(readFileSync(join(dir, "init.lua"), "utf8")).toBe("vim.o.number = true")
+  })
+
+  test("adopts read-only directories by widening the mode first", () => {
+    const ctx = makeCtx()
+    const state = emptyState()
+    const dir = join(ctx.home, ".config", "autostart")
+    mkdirSync(join(dir, "services"), { recursive: true })
+    writeFileSync(join(dir, "services", "x.desktop"), "x")
+    chmodSync(dir, 0o555)
+
+    expect(adopt(ctx, state, dir).ok).toBe(true)
+    expect(lstatSync(dir).isSymbolicLink()).toBe(true)
+    expect(readFileSync(join(dir, "services", "x.desktop"), "utf8")).toBe("x")
   })
 
   test("skips backups when disabled", () => {
