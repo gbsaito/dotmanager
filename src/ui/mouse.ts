@@ -14,3 +14,13 @@ export function scrollDelta(event: { scroll?: ScrollInfo } | null | undefined): 
   if (direction === "up") return -1
   return 0
 }
+
+/**
+ * True for a left-button press on the renderable that owns the handler:
+ * the OpenTUI parser reports presses as "down" events, and only the left
+ * button (0) counts as a click.
+ */
+export function leftClick(event: { type?: string; button?: number } | null | undefined): boolean {
+  if (!event || event.button !== 0) return false
+  return event.type === "down"
+}

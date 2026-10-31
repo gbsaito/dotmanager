@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { scrollDelta } from "../src/ui/mouse.ts"
+import { leftClick, scrollDelta } from "../src/ui/mouse.ts"
 
 describe("scrollDelta", () => {
   test("wheel down moves the selection down", () => {
@@ -15,5 +15,18 @@ describe("scrollDelta", () => {
     expect(scrollDelta({})).toBe(0)
     expect(scrollDelta({ scroll: { direction: "left", delta: 1 } })).toBe(0)
     expect(scrollDelta({ scroll: { direction: "right", delta: 1 } })).toBe(0)
+  })
+})
+
+describe("leftClick", () => {
+  test("left presses count as clicks", () => {
+    expect(leftClick({ type: "down", button: 0 })).toBe(true)
+  })
+
+  test("nothing counts but a left press", () => {
+    expect(leftClick(null)).toBe(false)
+    expect(leftClick({ type: "up", button: 0 })).toBe(false)
+    expect(leftClick({ type: "down", button: 2 })).toBe(false)
+    expect(leftClick({ type: "scroll", button: 0 })).toBe(false)
   })
 })

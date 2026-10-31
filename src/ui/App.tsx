@@ -6,7 +6,8 @@ import { ensureRepo, isRepo, pull, push, setRemote, sync, connectRemote } from "
 import { adopt, apply, unmanage } from "../core/ops.ts"
 import { loadState, recordAction, saveState, type State } from "../core/state.ts"
 import { displayPath } from "../core/util.ts"
-import { scrollDelta } from "./mouse.ts"
+import { scrollDelta, leftClick } from "./mouse.ts"
+import type { TreeRow } from "./tree.ts"
 import { MainPanel } from "./MainPanel.tsx"
 import { StatusPanel, type PromptState } from "./StatusPanel.tsx"
 import { Sidebar } from "./Sidebar.tsx"
@@ -115,6 +116,23 @@ export function App() {
     if (prompt || focus !== "managed") return
     const delta = scrollDelta(event)
     if (delta !== 0) moveSelection(delta)
+  }
+
+  /** A left click selects the clicked row; directories toggle on the same click. */
+  const handleSidebarClick = (index: number, row: TreeRow) => {
+    if (prompt) return
+    setMessage(null)
+    setFocus("files")
+    setSidebarIndex(clampIndex(index, rows.length))
+    if (row.isDir) toggleExpanded(row.path)
+  }
+
+  const handleManagedClick = (index: number, row: ManagedRow) => {
+    if (prompt) return
+    setMessage(null)
+    setFocus("managed")
+    setMainIndex(clampIndex(index, managedTree.length))
+    if (row.toggle) toggleManagedRow(row)
   }
 
   const activate = (enter: boolean) => {
@@ -311,6 +329,7 @@ export function App() {
           managed={managedPaths}
           expanded={expanded}
           onMouseScroll={handleSidebarScroll}
+          onRowClick={handleSidebarClick}
         />
         <MainPanel
           rows={managedTree}
@@ -322,6 +341,7 @@ export function App() {
           storageLabel={displayPath(ctx.storage, ctx.home)}
           pending={state.pending.length}
           onMouseScroll={handleManagedScroll}
+          onRowClick={handleManagedClick}
         />
       </box>
       <StatusPanel

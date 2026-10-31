@@ -1,4 +1,5 @@
 import { truncate } from "./text.ts"
+import { leftClick } from "./mouse.ts"
 import { colors } from "./theme.ts"
 import { windowSlice, type ManagedRow } from "./tree.ts"
 import type { MouseEvent } from "@opentui/core"
@@ -13,9 +14,10 @@ type MainPanelProps = {
   storageLabel: string
   pending: number
   onMouseScroll?: (event: MouseEvent) => void
+  onRowClick?: (index: number, row: ManagedRow) => void
 }
 
-export function MainPanel({ rows, itemCount, selected, focused, height, width, storageLabel, pending, onMouseScroll }: MainPanelProps) {
+export function MainPanel({ rows, itemCount, selected, focused, height, width, storageLabel, pending, onMouseScroll, onRowClick }: MainPanelProps) {
   const inner = Math.max(0, height - 4)
   const view = windowSlice(rows, selected, inner)
   const textWidth = Math.max(10, width - 4)
@@ -53,6 +55,13 @@ export function MainPanel({ rows, itemCount, selected, focused, height, width, s
               fg={isSelected ? colors.selectionText : color}
               bg={isSelected ? (focused ? colors.selectionFocused : colors.selection) : undefined}
               content={truncate(line, textWidth)}
+              onMouseDown={
+                onRowClick
+                  ? (event) => {
+                      if (leftClick(event)) onRowClick(index, row)
+                    }
+                  : undefined
+              }
             />
           )
         })
