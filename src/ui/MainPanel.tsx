@@ -43,13 +43,7 @@ export function MainPanel({ rows, itemCount, selected, focused, height, width, s
           const isSelected = index === selected
           const suffix = row.isSymlink && !row.managed ? " →" : ""
           const line = `${"  ".repeat(row.depth)}${row.name}${suffix}`
-          const color = row.managed
-            ? colors.success
-            : row.isDir
-              ? colors.accent
-              : row.isSymlink
-                ? colors.muted
-                : colors.text
+          const color = row.isDir ? colors.success : colors.text
           return (
             <text
               key={`${row.path}:${index}`}

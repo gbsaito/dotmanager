@@ -75,10 +75,10 @@ The managed panel is a directory tree grouped by real paths, so
 `~/.config/fastfetch` renders as `.config > fastfetch` and
 `~/.local/share/wireplumber` as `.local > share > wireplumber`. Path segments
 that are not managed themselves (`.config`, `.local`, `share`) are scaffolding
-groups: they start expanded and can be collapsed. Managed items are drawn in
-green, scaffolding in the accent color, and managed directories expand into
-their contents with `h`/`l` or `enter`. No marker or arrow glyphs are drawn;
-the indentation carries the hierarchy.
+groups: they start expanded and can be collapsed. Directories are drawn in
+green and files in white, and managed directories expand into their contents
+with `h`/`l` or `enter`. No marker or arrow glyphs are drawn; the indentation
+carries the hierarchy.
 
 | Key       | Action                                            |
 | --------- | ------------------------------------------------- |

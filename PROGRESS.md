@@ -27,7 +27,8 @@ started.
     nested under their path segments (`.config > fastfetch`,
     `.local > share > wireplumber`), scaffolding groups start expanded and can
     be collapsed, and managed directories expand into their contents. Rows are
-    plain indented names without marker or arrow glyphs;
+    plain indented names without marker or arrow glyphs, directories in green
+    and files in white;
   - status panel with storage, remote, backup mode, last action, pending count,
     messages and key hints;
   - prompts for a custom path and for the git remote URL;
