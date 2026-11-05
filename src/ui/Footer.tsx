@@ -30,7 +30,7 @@ type FooterProps = {
 export function Footer({ config, pending, lastAction, message, focusFlag, width, prompt, onPromptInput, onPromptSubmit }: FooterProps) {
   const line = ` ${config.remote ? `⇣${config.remote}` : "no remote"} · ${pending} pending · ${config.backup ? "backups ON" : "backups OFF"} · ${focusFlag} · ${lastAction ? `last: ${lastAction.message}` : "ready"}`
   const hint = width >= 84 ? HELP_HINT : SHORT_HINT
-  const infoWidth = Math.max(10, width - hint.length - 3)
+  const infoWidth = Math.max(10, width - hint.length - 4)
 
   return (
     <box
@@ -61,7 +61,7 @@ export function Footer({ config, pending, lastAction, message, focusFlag, width,
             content={truncate(message ? ` ${message.text}` : line, infoWidth)}
             flexGrow={0}
           />
-          <text fg={colors.muted} content={hint} />
+          <text fg={colors.muted} content={` ${hint}`} />
         </>
       )}
     </box>
