@@ -12,11 +12,12 @@ type SidebarProps = {
   height: number
   managed: Set<string>
   expanded: Set<string>
+  foldersFirst: boolean
   onMouseScroll?: (event: MouseEvent) => void
   onRowClick?: (index: number, row: TreeRow) => void
 }
 
-export function Sidebar({ rows, selected, focused, width, height, managed, expanded, onMouseScroll, onRowClick }: SidebarProps) {
+export function Sidebar({ rows, selected, focused, width, height, managed, expanded, foldersFirst, onMouseScroll, onRowClick }: SidebarProps) {
   const inner = Math.max(0, height - 2)
   const view = windowSlice(rows, selected, inner)
   const textWidth = Math.max(8, width - 4)

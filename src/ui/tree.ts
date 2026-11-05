@@ -14,7 +14,7 @@ export type ManagedRow = TreeRow & { managed: boolean; toggle: boolean; open: bo
 
 const MAX_ROWS = 2000
 
-export function listTree(root: string, expanded: Set<string>): TreeRow[] {
+export function listTree(root: string, expanded: Set<string>, foldersFirst = true): TreeRow[] {
   const rows: TreeRow[] = []
 
   const walk = (dir: string, depth: number): void => {
@@ -26,7 +26,8 @@ export function listTree(root: string, expanded: Set<string>): TreeRow[] {
     }
     entries.sort((a, b) => {
       const dirDelta = Number(b.isDirectory()) - Number(a.isDirectory())
-      return dirDelta !== 0 ? dirDelta : a.name.localeCompare(b.name)
+      if (foldersFirst) return dirDelta !== 0 ? dirDelta : a.name.localeCompare(b.name)
+      return a.name.localeCompare(b.name)
     })
 
     for (const entry of entries) {
