@@ -2,10 +2,10 @@ import { describe, expect, test } from "bun:test"
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { defaultConfig, resolvePaths, type Ctx } from "../src/core/config.ts"
+import { defaultConfig, loadConfig, resolvePaths, saveConfig, type Ctx } from "../src/core/config.ts"
 import { getRemote, isRepo, push, setRemote, sync } from "../src/core/git.ts"
 import { add, apply, forget, writeManifest } from "../src/core/ops.ts"
-import { emptyState } from "../src/core/state.ts"
+import { emptyState, loadState, saveState } from "../src/core/state.ts"
 import { displayPath, repoRelativePath } from "../src/core/util.ts"
 
 function makeCtx(options: { backup?: boolean } = {}): Ctx {
@@ -22,6 +22,37 @@ describe("path mapping", () => {
     expect(repoRelativePath("/home/me/.config/foo", "/home/me")).toBe(".config/foo")
     expect(repoRelativePath("/etc/hosts", "/home/me")).toBe("_external/etc/hosts")
     expect(displayPath("/home/me/.config/foo", "/home/me")).toBe("~/.config/foo")
+  })
+})
+
+describe("portable state", () => {
+  test("state serializes home-relative and expands for any user", () => {
+    const dir = join(mkdtempSync(join(tmpdir(), "dm-state-")))
+    const statePath = join(dir, "state.json")
+    const state = emptyState()
+    state.items.push({ path: "/home/me/.zshrc", repoPath: ".zshrc", addedAt: "now", backupPath: "/home/me/.config/dotmanager/backup/x/.zshrc" })
+    state.pending.push({ kind: "add", path: "/home/me/.zshrc", at: "now", commit: "abc" })
+    saveState(statePath, state, "/home/me")
+
+    const raw = JSON.parse(readFileSync(statePath, "utf8"))
+    expect(raw.items[0].path).toBe("~/.zshrc")
+    expect(raw.pending[0].path).toBe("~/.zshrc")
+
+    const other = loadState(statePath, "/home/someone")
+    expect(other.items[0]!.path).toBe("/home/someone/.zshrc")
+    expect(other.pending[0]!.path).toBe("/home/someone/.zshrc")
+
+    const legacyPath = join(dir, "legacy.json")
+    writeFileSync(legacyPath, JSON.stringify({ version: 1, items: [{ path: "/home/me/.zshrc", repoPath: ".zshrc", addedAt: "now", backupPath: null }], pending: [], lastAction: null }))
+    expect(loadState(legacyPath, "/home/me").items[0]!.path).toBe("/home/me/.zshrc")
+  })
+
+  test("config storage serializes home-relative", () => {
+    const dir = mkdtempSync(join(tmpdir(), "dm-cfg-"))
+    const paths = { configDir: dir, configPath: join(dir, "config.json"), statePath: join(dir, "state.json"), backupRoot: join(dir, "backup") }
+    saveConfig(paths, { ...defaultConfig("/home/me"), storage: "/home/me/dotfiles" }, "/home/me")
+    expect(JSON.parse(readFileSync(paths.configPath, "utf8")).storage).toBe("~/dotfiles")
+    expect(loadConfig(paths, "/home/someone").storage).toBe("/home/someone/dotfiles")
   })
 })
 

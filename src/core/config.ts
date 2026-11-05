@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { expandHome } from "./util.ts"
+import { expandHome, displayPath } from "./util.ts"
 
 export type Config = {
   version: 1
@@ -45,9 +45,11 @@ export function loadConfig(paths: Paths, home: string = homedir()): Config {
   }
 }
 
-export function saveConfig(paths: Paths, config: Config): void {
+export function saveConfig(paths: Paths, config: Config, home: string = homedir()): void {
+  // Storage saved as `~/...` so config.json stays user-independent too.
+  const portable = { ...config, storage: config.storage.startsWith("~") ? config.storage : displayPath(config.storage, home) }
   mkdirSync(paths.configDir, { recursive: true })
-  writeFileSync(paths.configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8")
+  writeFileSync(paths.configPath, `${JSON.stringify(portable, null, 2)}\n`, "utf8")
 }
 
 /** Everything a filesystem or git operation needs. */
