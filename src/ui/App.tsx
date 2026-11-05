@@ -11,7 +11,7 @@ import { Footer, type ModalState, type PromptState } from "./Footer.tsx"
 import { ManagedPanel } from "./ManagedPanel.tsx"
 import { Modal, opsModalRows, paletteRows } from "./Modals.tsx"
 import { Sidebar } from "./Sidebar.tsx"
-import { clampIndex, listTree, managedRows } from "./tree.ts"
+import { clampIndex, listTree, managedRows, type ManagedRow } from "./tree.ts"
 import { colors } from "./theme.ts"
 
 type Focus = "files" | "managed"
@@ -28,6 +28,8 @@ export function App() {
   const [sidebarIndex, setSidebarIndex] = useState(0)
   const [mainIndex, setMainIndex] = useState(0)
   const [expanded, setExpanded] = useState(() => new Set<string>())
+  const [collapsed, setCollapsed] = useState(() => new Set<string>())
+  const [history, setHistory] = useState<{ kind: "add" | "forget"; path: string }[]>([])
   const [prompt, _setPrompt] = useState<PromptState | null>(null)
   // Ref mirror so keystrokes arriving between renders see the prompt/modal,
   // instead of the stale render closure.
@@ -52,8 +54,7 @@ export function App() {
 
   const rows = useMemo(() => listTree(ctx.home, expanded), [ctx.home, expanded])
   const managedPaths = useMemo(() => new Set(state.items.map((item) => item.path)), [state.items])
-  const isDirPath = (path: string): boolean => rows.some((row) => row.path === path && row.isDir)
-  const tree = useMemo(() => managedRows(state.items, ctx.home, isDirPath), [state.items, ctx.home, rows])
+  const tree = useMemo(() => managedRows(state.items, ctx.home, expanded, collapsed), [state.items, ctx.home, expanded, collapsed])
 
   const sIdx = clampIndex(sidebarIndex, rows.length)
   const mIdx = clampIndex(mainIndex, tree.length)
@@ -74,15 +75,36 @@ export function App() {
     const fresh = loadState(ctx.paths.statePath)
     const outcome = add(ctx, fresh, path)
     commitState(fresh)
-    outcome.ok ? succeed(outcome.message) : fail(outcome.error)
+    if (outcome.ok) {
+      setHistory((current) => [...current, { kind: "add", path }])
+      succeed(outcome.message)
+    } else {
+      fail(outcome.error)
+    }
   }
 
   const forgetPath = (path: string) => {
     const fresh = loadState(ctx.paths.statePath)
     const outcome = forget(ctx, fresh, path)
     commitState(fresh)
-    if (outcome.ok) succeed(outcome.message)
-    else fail(outcome.error)
+    if (outcome.ok) {
+      setHistory((current) => [...current, { kind: "forget", path }])
+      succeed(outcome.message)
+    } else {
+      fail(outcome.error)
+    }
+  }
+
+  /** Undo the last add (forget) or forget (re-add) operation. */
+  const undo = () => {
+    const last = history[history.length - 1]
+    if (!last) {
+      succeed("nothing to undo")
+      return
+    }
+    setHistory((current) => current.slice(0, -1))
+    if (last.kind === "add") forgetPath(last.path)
+    else addPath(last.path)
   }
 
   const moveSelection = (delta: number) => {
@@ -287,6 +309,9 @@ export function App() {
       case ":":
         setModal({ kind: "palette" })
         break
+      case "u":
+        undo()
+        break
       default:
         break
     }
@@ -345,7 +370,24 @@ export function App() {
           onRowClick={(index2, row) => {
             if (prompt || modal) return
             setMainIndex(clampIndex(index2, tree.length))
-            forgetPath(row.path)
+            if (row.managed && row.toggle) {
+              // Managed directory: expand/collapse like the explorer.
+              setExpanded((previous) => {
+                const next = new Set(previous)
+                if (next.has(row.path)) next.delete(row.path)
+                else next.add(row.path)
+                return next
+              })
+            } else if (row.managed) {
+              forgetPath(row.path)
+            } else {
+              setCollapsed((previous) => {
+                const next = new Set(previous)
+                if (next.has(row.path)) next.delete(row.path)
+                else next.add(row.path)
+                return next
+              })
+            }
           }}
         />
       </box>

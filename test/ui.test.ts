@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { clampIndex, managedRows, windowSlice } from "../src/ui/tree.ts"
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 
 describe("windowSlice", () => {
   test("keeps the selection visible", () => {
@@ -15,18 +18,20 @@ describe("windowSlice", () => {
 })
 
 describe("managedRows", () => {
-  test("maps items to home-relative rows sorted by path", () => {
-    const rows = managedRows(
-      [
-        { path: "/home/me/.zshrc" },
-        { path: "/home/me/.config/nvim" },
-      ],
-      "/home/me",
-      (path) => path.endsWith("nvim"),
-    )
-    expect(rows.map((row) => row.name)).toEqual(["~/.config/nvim", "~/.zshrc"])
+  test("maps items to grouped home-relative rows", () => {
+    const home = mkdtempSync(join(tmpdir(), "dotmanager-home-"))
+    mkdirSync(join(home, ".config", "nvim"), { recursive: true })
+    writeFileSync(join(home, ".config", "nvim", "init.lua"), "")
+
+    const rows = managedRows([{ path: join(home, ".config", "nvim") }], home, new Set<string>(), new Set<string>())
+    expect(rows.length).toBe(2)
+    expect(rows[0]!.name).toBe(".config")
+    expect(rows[0]!.managed).toBe(false)
     expect(rows[0]!.isDir).toBe(true)
-    expect(rows[1]!.isDir).toBe(false)
+    expect(rows[1]!.name).toBe("nvim")
+    expect(rows[1]!.managed).toBe(true)
+    expect(rows[1]!.isDir).toBe(true)
+    expect(rows[1]!.toggle).toBe(true)
   })
 })
 
