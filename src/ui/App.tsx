@@ -282,10 +282,16 @@ export function App() {
       case "left":
       case "h":
         if (focus === "files" && selectedRow?.isDir && expanded.has(selectedRow.path)) setExpanded(toggleIn(expanded, selectedRow.path))
+        else if (focus === "managed" && selectedManaged?.toggle && selectedManaged.managed && selectedManaged.open) setExpanded(toggleIn(expanded, selectedManaged.path))
+        else if (focus === "managed" && selectedManaged?.toggle && !selectedManaged.managed && !selectedManaged.open) setCollapsed(toggleIn(collapsed, selectedManaged.path))
         break
       case "right":
       case "l":
         if (focus === "files" && selectedRow?.isDir && !expanded.has(selectedRow.path)) setExpanded(toggleIn(expanded, selectedRow.path))
+        else if (focus === "managed" && selectedManaged?.toggle && !selectedManaged.open) {
+          if (selectedManaged.managed) setExpanded(toggleIn(expanded, selectedManaged.path))
+          else setCollapsed(toggleIn(collapsed, selectedManaged.path))
+        }
         break
       case "return":
       case "enter":
