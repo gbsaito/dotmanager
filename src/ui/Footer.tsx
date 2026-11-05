@@ -10,7 +10,6 @@ export type PromptState = {
 }
 
 export type ModalState =
-  | { kind: "ops" }
   | { kind: "push"; changes: string[] }
   | { kind: "palette" }
   | null

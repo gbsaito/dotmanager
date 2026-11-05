@@ -9,7 +9,7 @@ import { displayPath, expandHome } from "../core/util.ts"
 import { scrollDelta } from "./mouse.ts"
 import { Footer, type ModalState, type PromptState } from "./Footer.tsx"
 import { ManagedPanel } from "./ManagedPanel.tsx"
-import { Modal, opsModalRows, paletteRows } from "./Modals.tsx"
+import { Modal, paletteRows } from "./Modals.tsx"
 import { Sidebar } from "./Sidebar.tsx"
 import { clampIndex, listTree, managedRows, type ManagedRow } from "./tree.ts"
 import { colors } from "./theme.ts"
@@ -221,15 +221,6 @@ export function App() {
 
     if (modalRef.current) {
       if (key.name === "escape") return setModal(null)
-      if (modalRef.current.kind === "ops") {
-        if (key.name === "s") {
-          setModal(null)
-          runSync("sync")
-        } else if (key.name === "p") {
-          setModal({ kind: "push", changes: pendingChanges() })
-        }
-        return
-      }
       if (modalRef.current.kind === "push") {
         if (key.name === "return" || key.name === "enter") {
           setModal(null)
@@ -296,9 +287,6 @@ export function App() {
       case "l":
         if (focus === "files" && selectedRow?.isDir && !expanded.has(selectedRow.path)) setExpanded(toggleIn(expanded, selectedRow.path))
         break
-      case "space":
-        setModal({ kind: "ops" })
-        break
       case "return":
       case "enter":
         if (focus === "files" && selectedRow) activate(selectedRow, "files")
@@ -323,9 +311,7 @@ export function App() {
     }
   })
 
-  const modalNode = !modal ? null : modal.kind === "ops" ? (
-    <Modal title=" Operations " rows={opsModalRows()} selected={0} width={width} height={height} />
-  ) : modal.kind === "push" ? (
+  const modalNode = !modal ? null : modal.kind === "push" ? (
     <Modal
       title={` Push — ${modal.changes.length} change(s) `}
       rows={(modal.changes.length === 0 ? [{ label: "(nothing new; push anyway)" }] : modal.changes.map((change) => ({ label: change }))).concat([{ label: "enter  push · esc  cancel" }])}

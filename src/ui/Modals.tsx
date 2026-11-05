@@ -48,14 +48,6 @@ export function Modal({ title, rows, selected, width, height }: ModalProps) {
   )
 }
 
-export function opsModalRows(): ModalRow[] {
-  return [
-    { label: "s  sync (pull then push)" },
-    { label: "p  push" },
-    { label: "esc  close" },
-  ]
-}
-
 export function paletteRows(): ModalRow[] {
   return [
     { label: "b  toggle backup" },
