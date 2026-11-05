@@ -5,7 +5,7 @@ import { createCtx, saveConfig, type Config } from "../core/config.ts"
 import { ensureRepo, git, push, setRemote, sync } from "../core/git.ts"
 import { add, apply, forget } from "../core/ops.ts"
 import { loadState, recordAction, saveState, type State } from "../core/state.ts"
-import { displayPath } from "../core/util.ts"
+import { displayPath, expandHome } from "../core/util.ts"
 import { scrollDelta } from "./mouse.ts"
 import { Footer, type ModalState, type PromptState } from "./Footer.tsx"
 import { ManagedPanel } from "./ManagedPanel.tsx"
@@ -43,6 +43,11 @@ export function App() {
     _setModal(value)
   }
   const [paletteIndex, setPaletteIndex] = useState(0)
+  const paletteIndexRef = useRef(0)
+  const movePalette = (delta: number) => {
+    paletteIndexRef.current = clampIndex(paletteIndexRef.current + delta, 3)
+    setPaletteIndex(paletteIndexRef.current)
+  }
   const [message, setMessage] = useState<Message | null>(null)
 
   const rows = useMemo(() => listTree(ctx.home, expanded), [ctx.home, expanded])
@@ -150,7 +155,11 @@ export function App() {
     if (index === 0) return toggleBackup()
     if (index === 1) return succeed("theme picker: planned")
     if (index === 2) return setPrompt({ label: " Git remote URL", placeholder: "git@github.com:you/dotfiles.git", value: config.remote ?? "" })
-    return setPrompt({ label: " Storage path (repo dir)", placeholder: "~/dotfiles", value: config.storage })
+    return setPrompt({
+      label: " Storage path (repo dir, takes effect on the next add)",
+      placeholder: "~/dotfiles",
+      value: config.storage,
+    })
   }
 
   const submitPrompt = (value: string) => {
@@ -164,7 +173,7 @@ export function App() {
     } else if (label.startsWith(" Git remote")) {
       changeConfig({ remote: trimmed }, `Remote set to ${trimmed}`)
     } else {
-      changeConfig({ storage: trimmed }, `Storage set to ${trimmed}`)
+      changeConfig({ storage: expandHome(trimmed, ctx.home) }, `Storage set to ${trimmed}`)
     }
   }
 
@@ -201,10 +210,20 @@ export function App() {
         }
         return
       }
-      // palette
-      if (key.name === "j" || key.name === "down") return setPaletteIndex((current) => clampIndex(current + 1, 3))
-      if (key.name === "k" || key.name === "up") return setPaletteIndex((current) => clampIndex(current - 1, 3))
-      if (key.name === "return" || key.name === "enter") return runPaletteCommand(paletteIndex)
+      // palette: j/k move, enter runs, or hit the row's letter directly
+      if (key.name === "j" || key.name === "down") return movePalette(1)
+      if (key.name === "k" || key.name === "up") return movePalette(-1)
+      if (key.name === "b") return runPaletteCommand(0)
+      if (key.name === "t") return runPaletteCommand(1)
+      if (key.name === "r") {
+        setModal(null)
+        return setPrompt({ label: " Git remote URL", placeholder: "git@github.com:you/dotfiles.git", value: config.remote ?? "" })
+      }
+      if (key.name === "s") {
+        setModal(null)
+        return setPrompt({ label: " Storage path (repo dir, takes effect on the next add)", placeholder: "~/dotfiles", value: config.storage })
+      }
+      if (key.name === "return" || key.name === "enter") return runPaletteCommand(paletteIndexRef.current)
       return
     }
 
