@@ -33,17 +33,9 @@ export function Footer({ config, pending, lastAction, message, focusFlag, width,
   const infoWidth = Math.max(10, width - hint.length - 4)
 
   return (
-    <box
-      style={{
-        height: 3,
-        border: true,
-        borderColor: prompt ? colors.accent : colors.border,
-        backgroundColor: colors.panel,
-        flexDirection: "row",
-      }}
-    >
+    <box style={{ height: 2, backgroundColor: colors.panel }}>
       {prompt ? (
-        <box style={{ flexDirection: "row", width: "100%" }}>
+        <box style={{ flexDirection: "row" }}>
           <text fg={colors.accent} content={prompt.label} />
           <input
             focused
@@ -57,7 +49,7 @@ export function Footer({ config, pending, lastAction, message, focusFlag, width,
       ) : (
         <>
           <text
-            fg={message ? (message.level === "error" ? colors.error : colors.success) : pending > 0 ? colors.accent : colors.muted}
+            fg={message ? (message.level === "error" ? colors.error : colors.accent) : colors.accent}
             content={truncate(message ? ` ${message.text}` : line, infoWidth)}
             flexGrow={0}
           />
