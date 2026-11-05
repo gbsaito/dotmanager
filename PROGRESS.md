@@ -46,5 +46,7 @@ bun run typecheck # clean
 ## Next moves
 
 1. User manual test of the full flow (see current task).
-2. Then: command palette commands, theme picker.
+2. Then: theme picker.
 3. Planned-last features (encryption, diffs) only after the user asks.
+4. Migration: push the new migration commits to the old remote (or start fresh
+   for v2) — old remote already holds them (`ahead 24`).
