@@ -1,6 +1,6 @@
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react"
 import type { MouseEvent } from "@opentui/core"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { createCtx, saveConfig, type Config } from "../core/config.ts"
 import { ensureRepo, git, push, setRemote, sync } from "../core/git.ts"
 import { add, apply, forget } from "../core/ops.ts"
@@ -28,8 +28,20 @@ export function App() {
   const [sidebarIndex, setSidebarIndex] = useState(0)
   const [mainIndex, setMainIndex] = useState(0)
   const [expanded, setExpanded] = useState(() => new Set<string>())
-  const [prompt, setPrompt] = useState<PromptState | null>(null)
-  const [modal, setModal] = useState<ModalState>(null)
+  const [prompt, _setPrompt] = useState<PromptState | null>(null)
+  // Ref mirror so keystrokes arriving between renders see the prompt/modal,
+  // instead of the stale render closure.
+  const promptRef = useRef<PromptState | null>(null)
+  const setPrompt = (value: PromptState | null) => {
+    promptRef.current = value
+    _setPrompt(value)
+  }
+  const [modal, _setModal] = useState<ModalState>(null)
+  const modalRef = useRef<ModalState>(null)
+  const setModal = (value: ModalState) => {
+    modalRef.current = value
+    _setModal(value)
+  }
   const [paletteIndex, setPaletteIndex] = useState(0)
   const [message, setMessage] = useState<Message | null>(null)
 
@@ -127,6 +139,7 @@ export function App() {
 
   const changeConfig = (patch: Partial<Config>, note: string) => {
     const next = { ...config, ...patch }
+    ctx.config = next // ops read backup/storage off ctx.config
     setConfig(next)
     saveConfig(ctx.paths, next)
     succeed(note)
@@ -144,13 +157,15 @@ export function App() {
     const label = prompt?.label ?? ""
     const trimmed = value.trim()
     setPrompt(null)
-    if (!trimmed) return fail("cancelled")
-    if (label.startsWith(" Git remote")) {
+    if (!trimmed) return fail("cancelled: empty input")
+
+    if (label === null || label.startsWith(" Path to add")) {
+      addPath(trimmed)
+    } else if (label.startsWith(" Git remote")) {
       changeConfig({ remote: trimmed }, `Remote set to ${trimmed}`)
     } else {
       changeConfig({ storage: trimmed }, `Storage set to ${trimmed}`)
     }
-    return undefined
   }
 
   const openPrompt = (payload: PromptState) => {
@@ -160,7 +175,7 @@ export function App() {
 
   useKeyboard((key) => {
     // Input prompts swallow everything but escape/submit.
-    if (prompt) {
+    if (promptRef.current) {
       if (key.name === "escape") {
         setPrompt(null)
         setMessage(null)
@@ -168,15 +183,9 @@ export function App() {
       return
     }
 
-    if (key.name === "q" || (key.name === "c" && key.ctrl)) {
-      renderer.stop()
-      renderer.destroy()
-      return
-    }
-
-    if (modal) {
+    if (modalRef.current) {
       if (key.name === "escape") return setModal(null)
-      if (modal.kind === "ops") {
+      if (modalRef.current.kind === "ops") {
         if (key.name === "s") {
           setModal(null)
           runSync("sync")
@@ -185,17 +194,23 @@ export function App() {
         }
         return
       }
-      if (modal.kind === "push") {
-        if (key.name === "return") {
+      if (modalRef.current.kind === "push") {
+        if (key.name === "return" || key.name === "enter") {
           setModal(null)
           runSync("push")
         }
         return
       }
       // palette
-      if (key.name === "j" || key.name === "down") return setPaletteIndex(clampIndex(paletteIndex + 1, 3))
-      if (key.name === "k" || key.name === "up") return setPaletteIndex(clampIndex(paletteIndex - 1, 3))
-      if (key.name === "return") return runPaletteCommand(paletteIndex)
+      if (key.name === "j" || key.name === "down") return setPaletteIndex((current) => clampIndex(current + 1, 3))
+      if (key.name === "k" || key.name === "up") return setPaletteIndex((current) => clampIndex(current - 1, 3))
+      if (key.name === "return" || key.name === "enter") return runPaletteCommand(paletteIndex)
+      return
+    }
+
+    if (key.name === "q" || (key.name === "c" && key.ctrl)) {
+      renderer.stop()
+      renderer.destroy()
       return
     }
 
@@ -321,8 +336,11 @@ export function App() {
         lastAction={state.lastAction}
         message={message}
         focusFlag={`focus ${focus.toUpperCase()}`}
+        width={width}
         prompt={prompt}
-        onPromptInput={(value) => setPrompt((current) => (current ? { ...current, value } : current))}
+        onPromptInput={(value) =>
+          setPrompt(promptRef.current ? { ...promptRef.current, value } : null)
+        }
         onPromptSubmit={(value) => submitPrompt(value)}
       />
       {modalNode}

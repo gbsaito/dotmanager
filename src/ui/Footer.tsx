@@ -1,6 +1,6 @@
 import type { Config } from "../core/config.ts"
 import type { StatusEntry } from "../core/state.ts"
-import { colors, HELP_HINT } from "./theme.ts"
+import { colors, HELP_HINT, SHORT_HINT } from "./theme.ts"
 import { truncate } from "./text.ts"
 
 export type PromptState = {
@@ -21,13 +21,16 @@ type FooterProps = {
   lastAction: StatusEntry | null
   message: { text: string; level: "info" | "error" } | null
   focusFlag: string
+  width: number
   prompt: PromptState | null
   onPromptInput: (value: string) => void
   onPromptSubmit: (value: string) => void
 }
 
-export function Footer({ config, pending, lastAction, message, focusFlag, prompt, onPromptInput, onPromptSubmit }: FooterProps) {
+export function Footer({ config, pending, lastAction, message, focusFlag, width, prompt, onPromptInput, onPromptSubmit }: FooterProps) {
   const line = ` ${config.remote ? `⇣${config.remote}` : "no remote"} · ${pending} pending · ${config.backup ? "backups ON" : "backups OFF"} · ${focusFlag} · ${lastAction ? `last: ${lastAction.message}` : "ready"}`
+  const hint = width >= 84 ? HELP_HINT : SHORT_HINT
+  const infoWidth = Math.max(10, width - hint.length - 3)
 
   return (
     <box
@@ -55,10 +58,10 @@ export function Footer({ config, pending, lastAction, message, focusFlag, prompt
         <>
           <text
             fg={message ? (message.level === "error" ? colors.error : colors.success) : pending > 0 ? colors.accent : colors.muted}
-            content={truncate(message ? ` ${message.text}` : truncate(line, 150), 150)}
-            flexGrow={1}
+            content={truncate(message ? ` ${message.text}` : line, infoWidth)}
+            flexGrow={0}
           />
-          <text fg={colors.muted} content={` ${HELP_HINT} `} />
+          <text fg={colors.muted} content={hint} />
         </>
       )}
     </box>
