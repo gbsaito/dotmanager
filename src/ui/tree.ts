@@ -1,4 +1,4 @@
-import { lstatSync, readdirSync, statSync } from "node:fs"
+import { lstatSync, readdirSync, statSync, type Dirent } from "node:fs"
 import { join } from "node:path"
 import { displayPath } from "../core/util.ts"
 
@@ -14,7 +14,7 @@ export type ManagedRow = TreeRow & { managed: boolean; toggle: boolean; open: bo
 
 const MAX_ROWS = 2000
 
-export function listTree(root: string, expanded: Set<string>, foldersFirst = true): TreeRow[] {
+export function listTree(root: string, expanded: Set<string>): TreeRow[] {
   const rows: TreeRow[] = []
 
   const walk = (dir: string, depth: number): void => {
@@ -24,11 +24,9 @@ export function listTree(root: string, expanded: Set<string>, foldersFirst = tru
     } catch {
       return
     }
-    entries.sort((a, b) => {
-      const dirDelta = Number(b.isDirectory()) - Number(a.isDirectory())
-      if (foldersFirst) return dirDelta !== 0 ? dirDelta : a.name.localeCompare(b.name)
-      return a.name.localeCompare(b.name)
-    })
+    // dotfiles (hidden) first, then normal folders, then normal files
+    const tier = (e: Dirent) => (e.name.startsWith(".") ? 0 : e.isDirectory() ? 1 : 2)
+    entries.sort((a, b) => tier(a) - tier(b) || a.name.localeCompare(b.name))
 
     for (const entry of entries) {
       if (rows.length >= MAX_ROWS) return
