@@ -43,12 +43,14 @@ export function ManagedPanel({ rows, itemCount, selected, focused, height, width
         view.rows.map((row, offset) => {
           const index = view.start + offset
           const isSelected = index === selected
+          const suffix = row.isSymlink && !row.managed ? " →" : ""
+          const line = `${"  ".repeat(row.depth)}${row.name}${suffix}`
           return (
             <text
               key={`${row.path}:${index}`}
               fg={isSelected ? colors.selectionText : row.isDir ? colors.managed : colors.text}
               bg={isSelected ? (focused ? colors.selectionFocused : colors.selection) : undefined}
-              content={truncate(row.name, textWidth)}
+              content={truncate(line, textWidth)}
               onMouseDown={
                 onRowClick
                   ? (event) => {
