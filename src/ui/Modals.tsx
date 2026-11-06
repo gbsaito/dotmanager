@@ -54,5 +54,6 @@ export function paletteRows(): ModalRow[] {
     { label: "t  change theme", hint: "planned" },
     { label: "r  change remote" },
     { label: "s  change storage" },
+    { label: "f  show folders first" },
   ]
 }

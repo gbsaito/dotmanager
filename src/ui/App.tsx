@@ -29,6 +29,7 @@ export function App() {
   const [mainIndex, setMainIndex] = useState(0)
   const [expanded, setExpanded] = useState(() => new Set<string>())
   const [history, setHistory] = useState<{ kind: "add" | "forget"; path: string }[]>([])
+  const [foldersFirst, setFoldersFirst] = useState(true)
   const [prompt, _setPrompt] = useState<PromptState | null>(null)
   // Ref mirror so keystrokes arriving between renders see the prompt/modal,
   // instead of the stale render closure.
@@ -46,12 +47,12 @@ export function App() {
   const [paletteIndex, setPaletteIndex] = useState(0)
   const paletteIndexRef = useRef(0)
   const movePalette = (delta: number) => {
-    paletteIndexRef.current = clampIndex(paletteIndexRef.current + delta, 3)
+    paletteIndexRef.current = clampIndex(paletteIndexRef.current + delta, 4)
     setPaletteIndex(paletteIndexRef.current)
   }
   const [message, setMessage] = useState<Message | null>(null)
 
-  const rows = useMemo(() => listTree(ctx.home, expanded), [ctx.home, expanded])
+  const rows = useMemo(() => listTree(ctx.home, expanded, foldersFirst), [ctx.home, expanded, foldersFirst])
   const managedPaths = useMemo(() => new Set(state.items.map((item) => item.path)), [state.items])
   const tree = useMemo(() => managedRows(state.items, ctx.home, expanded), [state.items, ctx.home, expanded])
 
@@ -171,12 +172,20 @@ export function App() {
     succeed(note)
   }
 
+  const toggleFoldersFirst = () => {
+    setFoldersFirst((current) => {
+      const next = !current
+      succeed(next ? "Folders first ON" : "Folders first OFF")
+      return next
+    })
+  }
   const runPaletteCommand = (index: number) => {
     setModal(null)
     if (index === 0) return toggleBackup()
     if (index === 1) return succeed("theme picker: planned")
     if (index === 2) return setPrompt({ label: " Git remote URL", placeholder: "git@github.com:you/dotfiles.git", value: config.remote ?? "" })
     if (index === 3) return setPrompt({ label: " Storage path (repo dir, takes effect on the next add)", placeholder: "~/dotfiles", value: config.storage })
+    return toggleFoldersFirst()
   }
 
   const submitPrompt = (value: string) => {
@@ -231,6 +240,7 @@ export function App() {
         setModal(null)
         return setPrompt({ label: " Storage path (repo dir, takes effect on the next add)", placeholder: "~/dotfiles", value: config.storage })
       }
+      if (key.name === "f") return runPaletteCommand(4)
       if (key.name === "return" || key.name === "enter") return runPaletteCommand(paletteIndexRef.current)
       return
     }
