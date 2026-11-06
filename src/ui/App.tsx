@@ -28,7 +28,6 @@ export function App() {
   const [sidebarIndex, setSidebarIndex] = useState(0)
   const [mainIndex, setMainIndex] = useState(0)
   const [expanded, setExpanded] = useState(() => new Set<string>())
-  const [collapsed, setCollapsed] = useState(() => new Set<string>())
   const [history, setHistory] = useState<{ kind: "add" | "forget"; path: string }[]>([])
   const [prompt, _setPrompt] = useState<PromptState | null>(null)
   // Ref mirror so keystrokes arriving between renders see the prompt/modal,
@@ -54,7 +53,7 @@ export function App() {
 
   const rows = useMemo(() => listTree(ctx.home, expanded), [ctx.home, expanded])
   const managedPaths = useMemo(() => new Set(state.items.map((item) => item.path)), [state.items])
-  const tree = useMemo(() => managedRows(state.items, ctx.home, expanded, collapsed), [state.items, ctx.home, expanded, collapsed])
+  const tree = useMemo(() => managedRows(state.items, ctx.home, expanded), [state.items, ctx.home, expanded])
 
   const sIdx = clampIndex(sidebarIndex, rows.length)
   const mIdx = clampIndex(mainIndex, tree.length)
@@ -272,12 +271,12 @@ export function App() {
       case "left":
       case "h":
         if (focus === "files" && selectedRow?.isDir && expanded.has(selectedRow.path)) setExpanded(toggleIn(expanded, selectedRow.path))
-        else if (focus === "managed" && selectedManaged?.toggle && selectedManaged.open) setCollapsed(toggleIn(collapsed, selectedManaged.path))
+        else if (focus === "managed" && selectedManaged?.toggle && selectedManaged.open) setExpanded(toggleIn(expanded, selectedManaged.path))
         break
       case "right":
       case "l":
         if (focus === "files" && selectedRow?.isDir && !expanded.has(selectedRow.path)) setExpanded(toggleIn(expanded, selectedRow.path))
-        else if (focus === "managed" && selectedManaged?.toggle && !selectedManaged.open) setCollapsed(toggleIn(collapsed, selectedManaged.path))
+        else if (focus === "managed" && selectedManaged?.toggle && !selectedManaged.open) setExpanded(toggleIn(expanded, selectedManaged.path))
         break
       case "return":
       case "enter":
@@ -354,14 +353,7 @@ export function App() {
             if (prompt || modal) return
             setMainIndex(clampIndex(index2, tree.length))
             if (row.managed && !row.toggle) forgetPath(row.path)
-            else {
-              setCollapsed((previous) => {
-                const next = new Set(previous)
-                if (next.has(row.path)) next.delete(row.path)
-                else next.add(row.path)
-                return next
-              })
-            }
+            else setExpanded(toggleIn(expanded, row.path))
           }}
         />
       </box>

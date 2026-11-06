@@ -18,26 +18,31 @@ describe("windowSlice", () => {
 })
 
 describe("managedRows", () => {
-  test("maps items to grouped home-relative rows", () => {
+  test("maps items to grouped home-relative rows, closed unless expanded", () => {
     const home = mkdtempSync(join(tmpdir(), "dotmanager-home-"))
-    mkdirSync(join(home, ".config", "nvim"), { recursive: true })
-    writeFileSync(join(home, ".config", "nvim", "init.lua"), "")
+    const nvim = join(home, ".config", "nvim")
+    mkdirSync(nvim, { recursive: true })
+    writeFileSync(join(nvim, "init.lua"), "")
 
-    const rows = managedRows([{ path: join(home, ".config", "nvim") }], home, new Set<string>(), new Set<string>())
-    expect(rows.length).toBe(3)
+    // Default: everything closed (groups, managed dirs and their contents below).
+    const rows = managedRows([{ path: nvim }], home, new Set<string>())
+    expect(rows.length).toBe(1)
     expect(rows[0]!.name).toBe(".config")
     expect(rows[0]!.managed).toBe(false)
-    expect(rows[0]!.open).toBe(true)
-    expect(rows[1]!.name).toBe("nvim")
-    expect(rows[1]!.managed).toBe(true)
-    expect(rows[1]!.open).toBe(true)
-    expect(rows[2]!.name).toBe("init.lua")
-    expect(rows[2]!.depth).toBe(2)
+    expect(rows[0]!.open).toBe(false)
 
-    const closed = managedRows([{ path: join(home, ".config", "nvim") }], home, new Set<string>(), new Set([join(home, ".config", "nvim")]))
-    expect(closed.length).toBe(2)
-    expect(closed[1]!.name).toBe("nvim")
-    expect(closed[1]!.open).toBe(false)
+    // Opening the group reveals child rows (still closed).
+    const group = managedRows([{ path: nvim }], home, new Set([join(home, ".config")]))
+    expect(group.length).toBe(2)
+    expect(group[1]!.name).toBe("nvim")
+    expect(group[1]!.open).toBe(false)
+
+    // Opening the managed dir reveals its contents.
+    const open = managedRows([{ path: nvim }], home, new Set([join(home, ".config"), nvim]))
+    expect(open.length).toBe(3)
+    expect(open[2]!.name).toBe("init.lua")
+    expect(open[2]!.depth).toBe(2)
+    expect(open[1]!.open).toBe(true)
   })
 })
 

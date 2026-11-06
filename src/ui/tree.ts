@@ -73,15 +73,10 @@ function relativeSegments(path: string, home: string): string[] | null {
 /**
  * Managed panel rows: managed items grouped by real paths, so
  * `~/.config/fastfetch` shows as `.config > fastfetch`, `~/.local/share/wireplumber`
- * as `.local > share > wireplumber`. Path scaffolding rows start expanded so the
- * managed items are visible right away; managed directories expand into contents.
+ * as `.local > share > wireplumber`. All directories start closed; `expanded`
+ * (keyed by path) tracks what is open, shared with the file explorer.
  */
-export function managedRows(
-  items: { path: string }[],
-  home: string,
-  expanded: Set<string>,
-  collapsed: Set<string> = new Set(),
-): ManagedRow[] {
+export function managedRows(items: { path: string }[], home: string, expanded: Set<string>): ManagedRow[] {
   const roots = new Map<string, Node>()
 
   const insert = (segments: string[], parentPath: string, depth: number, siblings: Map<string, Node>): Node => {
@@ -110,10 +105,10 @@ export function managedRows(
     insert(segments, home, 0, roots)
   }
 
-  return flatten(roots, expanded, collapsed)
+  return flatten(roots, expanded)
 }
 
-function flatten(roots: Map<string, Node>, expanded: Set<string>, collapsed: Set<string>): ManagedRow[] {
+function flatten(roots: Map<string, Node>, expanded: Set<string>): ManagedRow[] {
   const rows: ManagedRow[] = []
 
   const sorted = (nodes: Map<string, Node>): Node[] =>
@@ -127,7 +122,7 @@ function flatten(roots: Map<string, Node>, expanded: Set<string>, collapsed: Set
     const info = statInfo(node.path)
     const isGroup = !node.managed
     const isDir = node.managed ? info.isDir : true
-    const open = !collapsed.has(node.path)
+    const open = expanded.has(node.path)
 
     rows.push({
       path: node.path,
@@ -142,9 +137,9 @@ function flatten(roots: Map<string, Node>, expanded: Set<string>, collapsed: Set
 
     if (node.managed) {
       if (info.isDir && open) {
-        for (const child of listTree(node.path, new Set())) {
+        for (const child of listTree(node.path, expanded)) {
           if (rows.length >= MAX_ROWS) break
-          rows.push({ ...child, depth: node.depth + 1, managed: false, toggle: child.isDir, open: !collapsed.has(child.path) })
+          rows.push({ ...child, depth: node.depth + 1, managed: false, toggle: child.isDir, open: expanded.has(child.path) })
         }
       }
       return
