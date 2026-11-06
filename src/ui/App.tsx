@@ -272,16 +272,12 @@ export function App() {
       case "left":
       case "h":
         if (focus === "files" && selectedRow?.isDir && expanded.has(selectedRow.path)) setExpanded(toggleIn(expanded, selectedRow.path))
-        else if (focus === "managed" && selectedManaged?.toggle && selectedManaged.managed && selectedManaged.open) setExpanded(toggleIn(expanded, selectedManaged.path))
-        else if (focus === "managed" && selectedManaged?.toggle && !selectedManaged.managed && selectedManaged.open) setCollapsed(toggleIn(collapsed, selectedManaged.path))
+        else if (focus === "managed" && selectedManaged?.toggle && selectedManaged.open) setCollapsed(toggleIn(collapsed, selectedManaged.path))
         break
       case "right":
       case "l":
         if (focus === "files" && selectedRow?.isDir && !expanded.has(selectedRow.path)) setExpanded(toggleIn(expanded, selectedRow.path))
-        else if (focus === "managed" && selectedManaged?.toggle && !selectedManaged.open) {
-          if (selectedManaged.managed) setExpanded(toggleIn(expanded, selectedManaged.path))
-          else setCollapsed(toggleIn(collapsed, selectedManaged.path))
-        }
+        else if (focus === "managed" && selectedManaged?.toggle && !selectedManaged.open) setCollapsed(toggleIn(collapsed, selectedManaged.path))
         break
       case "return":
       case "enter":
@@ -357,17 +353,8 @@ export function App() {
           onRowClick={(index2, row) => {
             if (prompt || modal) return
             setMainIndex(clampIndex(index2, tree.length))
-            if (row.managed && row.toggle) {
-              // Managed directory: expand/collapse like the explorer.
-              setExpanded((previous) => {
-                const next = new Set(previous)
-                if (next.has(row.path)) next.delete(row.path)
-                else next.add(row.path)
-                return next
-              })
-            } else if (row.managed) {
-              forgetPath(row.path)
-            } else {
+            if (row.managed && !row.toggle) forgetPath(row.path)
+            else {
               setCollapsed((previous) => {
                 const next = new Set(previous)
                 if (next.has(row.path)) next.delete(row.path)

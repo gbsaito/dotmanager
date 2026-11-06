@@ -127,7 +127,7 @@ function flatten(roots: Map<string, Node>, expanded: Set<string>, collapsed: Set
     const info = statInfo(node.path)
     const isGroup = !node.managed
     const isDir = node.managed ? info.isDir : true
-    const open = isGroup ? !collapsed.has(node.path) : expanded.has(node.path)
+    const open = !collapsed.has(node.path)
 
     rows.push({
       path: node.path,
