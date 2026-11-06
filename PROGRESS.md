@@ -50,3 +50,6 @@ bun run typecheck # clean
 3. Planned-last features (encryption, diffs) only after the user asks.
 4. Migration: push the new migration commits to the old remote (or start fresh
    for v2) — old remote already holds them (`ahead 24`).
+
+## 2026-11-06
+- Added install.sh (curl | bash installs latest release; gh or GITHUB_TOKEN, private-repo aware) and release.sh (build + tag + publish asset). Published v1.0.0 (dotmanager-linux-x64). Install: `curl -fsSL https://raw.githubusercontent.com/gbsaito/dotmanager/main/install.sh | bash`
