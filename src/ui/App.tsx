@@ -9,7 +9,7 @@ import { displayPath, expandHome } from "../core/util.ts"
 import { scrollDelta } from "./mouse.ts"
 import { Footer, type ModalState, type PromptState } from "./Footer.tsx"
 import { ManagedPanel } from "./ManagedPanel.tsx"
-import { Modal, paletteRows } from "./Modals.tsx"
+import { Modal, helpRows, paletteRows } from "./Modals.tsx"
 import { Sidebar } from "./Sidebar.tsx"
 import { clampIndex, listTree, managedRows, type ManagedRow } from "./tree.ts"
 import { colors } from "./theme.ts"
@@ -62,7 +62,7 @@ export function App() {
   const selectedManaged = tree[mIdx]
 
   const sidebarWidth = Math.min(48, Math.max(22, Math.floor(width * 0.35)))
-  const mainHeight = Math.max(4, height - 4)
+  const mainHeight = Math.max(4, height - 5)
   const fail = (text: string) => setMessage({ text, level: "error" })
   const succeed = (text: string) => setMessage({ text, level: "info" })
 
@@ -227,6 +227,10 @@ export function App() {
         }
         return
       }
+      if (modalRef.current.kind === "help") {
+        setModal(null)
+        return
+      }
       // palette: j/k move, enter runs, or hit the row's letter directly
       if (key.name === "j" || key.name === "down") return movePalette(1)
       if (key.name === "k" || key.name === "up") return movePalette(-1)
@@ -304,6 +308,9 @@ export function App() {
       case ":":
         setModal({ kind: "palette" })
         break
+      case "?":
+        setModal({ kind: "help" })
+        break
       case "u":
         undo()
         break
@@ -320,6 +327,8 @@ export function App() {
       width={width}
       height={height}
     />
+  ) : modal.kind === "help" ? (
+    <Modal title=" Keybindings — press any key to close " rows={helpRows()} selected={0} width={width} height={height} />
   ) : (
     <Modal title=" Command palette " rows={paletteRows()} selected={paletteIndex} width={width} height={height} />
   )
@@ -372,7 +381,6 @@ export function App() {
         pending={state.pending.length}
         lastAction={state.lastAction}
         message={message}
-        focusFlag={`focus ${focus.toUpperCase()}`}
         width={width}
         prompt={prompt}
         onPromptInput={(value) =>

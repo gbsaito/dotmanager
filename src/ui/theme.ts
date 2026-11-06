@@ -16,5 +16,3 @@ export const colors = {
   selectionText: "#ffffff",
 } as const
 
-export const HELP_HINT = "tab focus a add A path x forget S sync P push : palette u undo q quit"
-export const SHORT_HINT = " a A x S P : u q"

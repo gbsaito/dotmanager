@@ -57,3 +57,22 @@ export function paletteRows(): ModalRow[] {
     { label: "f  show folders first" },
   ]
 }
+
+/** Answers the `?` menu. Update whenever keybindings change (keys + pane context). */
+export function helpRows(): ModalRow[] {
+  return [
+    { label: "tab            switch Files / Managed" },
+    { label: "j k / arrows   move selection" },
+    { label: "h l / arrows   collapse / expand directory" },
+    { label: "enter          activate row" },
+    { label: "a              add selected to managed" },
+    { label: "A              add by path" },
+    { label: "x              forget managed item" },
+    { label: "S              sync (pull + push)" },
+    { label: "P              push (shows changes)" },
+    { label: "u              undo last add/forget" },
+    { label: ":              command palette (b t r s f)" },
+    { label: "?              this help" },
+    { label: "q              quit" },
+  ]
+}

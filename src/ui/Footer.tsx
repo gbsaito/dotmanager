@@ -1,7 +1,8 @@
 import type { Config } from "../core/config.ts"
 import type { StatusEntry } from "../core/state.ts"
-import { colors, HELP_HINT, SHORT_HINT } from "./theme.ts"
+import { colors } from "./theme.ts"
 import { truncate } from "./text.ts"
+import { displayPath } from "../core/util.ts"
 
 export type PromptState = {
   label: string
@@ -12,6 +13,7 @@ export type PromptState = {
 export type ModalState =
   | { kind: "push"; changes: string[] }
   | { kind: "palette" }
+  | { kind: "help" }
   | null
 
 type FooterProps = {
@@ -19,16 +21,17 @@ type FooterProps = {
   pending: number
   lastAction: StatusEntry | null
   message: { text: string; level: "info" | "error" } | null
-  focusFlag: string
   width: number
   prompt: PromptState | null
   onPromptInput: (value: string) => void
   onPromptSubmit: (value: string) => void
 }
 
-export function Footer({ config, pending, lastAction, message, focusFlag, width, prompt, onPromptInput, onPromptSubmit }: FooterProps) {
-  const line = ` ${config.remote ? `⇣${config.remote}` : "no remote"} · ${pending} pending · ${config.backup ? "backups ON" : "backups OFF"} · ${focusFlag} · ${lastAction ? `last: ${lastAction.message}` : "ready"}`
-  const hint = width >= 84 ? HELP_HINT : SHORT_HINT
+export function Footer({ config, pending, lastAction, message, width, prompt, onPromptInput, onPromptSubmit }: FooterProps) {
+  const line = (s: string) => truncate(s, Math.max(10, width - 4))
+  const last = message ? message.text : lastAction ? `${lastAction.message} (${lastAction.at.slice(11, 19)})` : "—"
+  const lastColor = message?.level === "error" ? colors.error : colors.muted
+
   return (
     <box
       title=" Status "
@@ -37,7 +40,7 @@ export function Footer({ config, pending, lastAction, message, focusFlag, width,
       borderColor={prompt ? colors.accent : colors.border}
       backgroundColor={colors.panel}
       flexDirection="column"
-      style={{ height: 4 }}
+      style={{ height: 5 }}
     >
       {prompt ? (
         <box style={{ flexDirection: "row", height: 1 }}>
@@ -53,12 +56,9 @@ export function Footer({ config, pending, lastAction, message, focusFlag, width,
         </box>
       ) : (
         <>
-          <text
-            fg={message ? (message.level === "error" ? colors.error : colors.accent) : colors.accent}
-            content={truncate(message ? ` ${message.text}` : line, Math.max(10, width - 4))}
-            flexShrink={0}
-          />
-          <text fg={colors.muted} content={` ${truncate(hint, Math.max(10, width - 4))}`} />
+          <text fg={colors.text} content={line(` storage: ${displayPath(config.storage)} · remote: ${config.remote ?? "none"} · backups: ${config.backup ? "ON" : "OFF"}`)} />
+          <text fg={colors.accent} content={line(` ${pending} operations pending`)} />
+          <text fg={lastColor} content={line(` last: ${last}`)} />
         </>
       )}
     </box>
