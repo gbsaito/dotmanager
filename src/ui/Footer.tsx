@@ -29,12 +29,18 @@ type FooterProps = {
 export function Footer({ config, pending, lastAction, message, focusFlag, width, prompt, onPromptInput, onPromptSubmit }: FooterProps) {
   const line = ` ${config.remote ? `⇣${config.remote}` : "no remote"} · ${pending} pending · ${config.backup ? "backups ON" : "backups OFF"} · ${focusFlag} · ${lastAction ? `last: ${lastAction.message}` : "ready"}`
   const hint = width >= 84 ? HELP_HINT : SHORT_HINT
-  const infoWidth = Math.max(10, width - hint.length - 4)
-
   return (
-    <box style={{ height: 2, backgroundColor: colors.panel }}>
+    <box
+      title=" Status "
+      titleColor={prompt ? colors.accent : colors.muted}
+      border
+      borderColor={prompt ? colors.accent : colors.border}
+      backgroundColor={colors.panel}
+      flexDirection="column"
+      style={{ height: 4 }}
+    >
       {prompt ? (
-        <box style={{ flexDirection: "row" }}>
+        <box style={{ flexDirection: "row", height: 1 }}>
           <text fg={colors.accent} content={prompt.label} />
           <input
             focused
@@ -49,10 +55,10 @@ export function Footer({ config, pending, lastAction, message, focusFlag, width,
         <>
           <text
             fg={message ? (message.level === "error" ? colors.error : colors.accent) : colors.accent}
-            content={truncate(message ? ` ${message.text}` : line, infoWidth)}
-            flexGrow={0}
+            content={truncate(message ? ` ${message.text}` : line, Math.max(10, width - 4))}
+            flexShrink={0}
           />
-          <text fg={colors.muted} content={` ${hint}`} />
+          <text fg={colors.muted} content={` ${truncate(hint, Math.max(10, width - 4))}`} />
         </>
       )}
     </box>

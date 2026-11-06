@@ -62,7 +62,7 @@ export function App() {
   const selectedManaged = tree[mIdx]
 
   const sidebarWidth = Math.min(48, Math.max(22, Math.floor(width * 0.35)))
-  const mainHeight = Math.max(4, height - 2)
+  const mainHeight = Math.max(4, height - 4)
   const fail = (text: string) => setMessage({ text, level: "error" })
   const succeed = (text: string) => setMessage({ text, level: "info" })
 
