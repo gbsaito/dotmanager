@@ -142,9 +142,9 @@ function flatten(roots: Map<string, Node>, expanded: Set<string>, collapsed: Set
 
     if (node.managed) {
       if (info.isDir && open) {
-        for (const child of listTree(node.path, expanded)) {
+        for (const child of listTree(node.path, new Set())) {
           if (rows.length >= MAX_ROWS) break
-          rows.push({ ...child, depth: node.depth + 1, managed: false, toggle: child.isDir, open: expanded.has(child.path) })
+          rows.push({ ...child, depth: node.depth + 1, managed: false, toggle: child.isDir, open: !collapsed.has(child.path) })
         }
       }
       return
