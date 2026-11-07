@@ -14,6 +14,7 @@ restore→apply round trip. 20 tests pass; binary rebuilt (55aecfe).
 
 ## Done
 
+- 2026-11-07: GitHub repo `gbsaito/dotmanager` created (public, main; description: "A Terminal User Interface (TUI) to manage and synchronize dotfiles from a git repository."). Compiled binary untracked (117MB > GitHub 100MB limit; now gitignored) + history rewritten to drop it; pushed to origin. Release `v1.0.0` built (`./release.sh v1.0.0`) and published (asset `dotmanager-linux-x64`). README curl install (`install.sh`/`uninstall.sh`) live via raw.githubusercontent main.
 - Project scaffold: bun + typescript + opentui, tests, typecheck, git history.
 - Core modules ported from the old dotmanager with spec deltas:
   - validation now also refuses git repositories (`insideGitRepo` via
