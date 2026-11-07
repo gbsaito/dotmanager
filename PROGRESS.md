@@ -4,12 +4,23 @@ Last updated: 2026-11-07
 
 ## Current task
 
-Stale-binary bug found: `~/.local/bin/dotmanager` symlinked to the Nov 6 build,
-which pre-dated today's undo/restore/space work — the user was testing an old
-undo ("operations pending kept climbing"). No running processes were stale;
-rebuilt `dotmanager-linux-x64` from source (help-string verified in binary) and
-boot-checked in a pty. Awaiting user test of: `u` reverts AND drops the pending
-entry (counter decreases), pending capped at 25, `r` restore, `space` add.
+Recovery after the user deleted `~/.config/dotmanager/{state,config}.json` to
+clear "operations pending" (the managed list lived in state.json):
+- `dotmanager.json` in ~/dotfiles was EMPTY — toggle-war `forget` commits were
+  pushed, wiping the manifest on origin too. `apply` (S sync) restores from
+  that manifest, so sync had nothing to restore. (Earlier no-remote theory was
+  WRONG — config.json still existed; the gate was the empty manifest.)
+- Repo content for `.config/yt-dlp`, `.config/wireplumber` (home = dangling
+  symlink), `.config/urlink`, `.local/bin/mic-gain` (home = real file) was
+  re-restored from the forget-commit parents; the other 21/25 repo copies never
+  moved. Manifest rebuilt to 25 items, pushed (`origin/main`).
+- App code: `S` sync now runs `apply` even when no remote is configured
+  (local restore) and reports `apply` failures instead of masking them. Binary
+  rebuilt (457db...).
+- User presses `S` in the fresh binary: apply relinks, managed section returns
+  (25 items). `operations pending` cleared by the state.json deletion as asked.
+- Lesson: include `dotmanager.json`/state rebuild guidance in the README hazard
+  for deleting state.json.
 
 ## Done
 
