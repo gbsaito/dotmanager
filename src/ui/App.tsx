@@ -149,19 +149,35 @@ export function App() {
   const runSync = (kind: "sync" | "push") => {
     const prepared = ensureRepo(ctx.storage)
     if (!prepared.ok) return fail(prepared.stderr || "git init failed")
-    if (!config.remote) return fail("no remote configured — open the palette (:) and set one")
-    const remote = setRemote(ctx.storage, config.remote)
-    if (!remote.ok) return fail(remote.stderr || "could not configure the remote")
 
-    const result = kind === "sync" ? sync(ctx.storage) : push(ctx.storage)
-    if (!result.ok) return fail(result.stderr || `git ${kind} failed`)
+    if (kind === "push") {
+      if (!config.remote) return fail("no remote configured — open the palette (:) and set one")
+      const remote = setRemote(ctx.storage, config.remote)
+      if (!remote.ok) return fail(remote.stderr || "could not configure the remote")
+      const result = push(ctx.storage)
+      if (!result.ok) return fail(result.stderr || "git push failed")
+      const fresh = loadState(ctx.paths.statePath)
+      fresh.pending = []
+      recordAction(fresh, "info", "Pushed to remote")
+      commitState(fresh)
+      return succeed("Pushed to remote")
+    }
 
+    // Sync: pull when a remote is set; rebuild links/state from the repo manifest
+    // either way — this is also the recovery path after deleting state.json.
+    if (config.remote) {
+      const remote = setRemote(ctx.storage, config.remote)
+      if (!remote.ok) return fail(remote.stderr || "could not configure the remote")
+      const result = sync(ctx.storage)
+      if (!result.ok) return fail(result.stderr || "git sync failed")
+    }
     const fresh = loadState(ctx.paths.statePath)
-    if (kind === "sync") apply(ctx, fresh) // keep local state in step with the pulled repo
+    const outcome = apply(ctx, fresh)
     fresh.pending = []
-    recordAction(fresh, "info", kind === "sync" ? "Synced with remote" : "Pushed to remote")
+    recordAction(fresh, "info", outcome.ok ? outcome.message : "Sync saved")
     commitState(fresh)
-    succeed(kind === "sync" ? "Synced with remote" : "Pushed to remote")
+    if (outcome.ok) succeed(config.remote ? outcome.message : `${outcome.message} (local restore — no remote configured)`)
+    else fail(outcome.error)
   }
 
   const pendingChanges = (): string[] => {
