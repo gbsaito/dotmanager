@@ -226,6 +226,20 @@ export function forget(ctx: Ctx, state: State, absolutePath: string, now: Date =
   }
 }
 
+/** Remove every symlink and move the repo copies back to their original locations. */
+export function restore(ctx: Ctx, state: State, now: Date = new Date()): OpOutcome {
+  const failures: string[] = []
+  let count = 0
+  for (const item of [...state.items]) {
+    const outcome = forget(ctx, state, item.path, now)
+    if (outcome.ok) count++
+    else failures.push(outcome.error)
+  }
+  if (failures.length > 0) return { ok: false, error: failures.join("; ") }
+  recordAction(state, "info", `Restored ${count} items`)
+  return { ok: true, message: `Removed all symlinks, restored ${count} item(s)` }
+}
+
 /**
  * Rebuild symlinks from the repo manifest (after a pull on a new machine).
  * Per spec: when a real file/directory already exists at the target and

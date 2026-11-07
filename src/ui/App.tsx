@@ -3,7 +3,7 @@ import type { MouseEvent } from "@opentui/core"
 import { useMemo, useRef, useState } from "react"
 import { createCtx, saveConfig, type Config } from "../core/config.ts"
 import { ensureRepo, git, push, setRemote, sync } from "../core/git.ts"
-import { add, apply, forget } from "../core/ops.ts"
+import { add, apply, forget, restore } from "../core/ops.ts"
 import { loadState, recordAction, saveState, type State } from "../core/state.ts"
 import { displayPath, expandHome } from "../core/util.ts"
 import { scrollDelta } from "./mouse.ts"
@@ -28,7 +28,6 @@ export function App() {
   const [sidebarIndex, setSidebarIndex] = useState(0)
   const [mainIndex, setMainIndex] = useState(0)
   const [expanded, setExpanded] = useState(() => new Set<string>())
-  const [history, setHistory] = useState<{ kind: "add" | "forget"; path: string }[]>([])
   const [foldersFirst, setFoldersFirst] = useState(true)
   const [prompt, _setPrompt] = useState<PromptState | null>(null)
   // Ref mirror so keystrokes arriving between renders see the prompt/modal,
@@ -75,12 +74,8 @@ export function App() {
     const fresh = loadState(ctx.paths.statePath)
     const outcome = add(ctx, fresh, path)
     commitState(fresh)
-    if (outcome.ok) {
-      setHistory((current) => [...current, { kind: "add", path }])
-      succeed(outcome.message)
-    } else {
-      fail(outcome.error)
-    }
+    if (outcome.ok) succeed(outcome.message)
+    else fail(outcome.error)
   }
 
   const forgetPath = (path: string) => {
@@ -88,23 +83,30 @@ export function App() {
     const outcome = forget(ctx, fresh, path)
     commitState(fresh)
     if (outcome.ok) {
-      setHistory((current) => [...current, { kind: "forget", path }])
       succeed(outcome.message)
     } else {
       fail(outcome.error)
     }
   }
 
-  /** Undo the last add (forget) or forget (re-add) operation. */
+  /** Undo the last pending operation: revert its add (forget) or forget (re-add). */
   const undo = () => {
-    const last = history[history.length - 1]
+    const fresh = loadState(ctx.paths.statePath)
+    const last = fresh.pending[fresh.pending.length - 1]
     if (!last) {
       succeed("nothing to undo")
       return
     }
-    setHistory((current) => current.slice(0, -1))
     if (last.kind === "add") forgetPath(last.path)
     else addPath(last.path)
+  }
+
+  const restoreAll = () => {
+    const fresh = loadState(ctx.paths.statePath)
+    const outcome = restore(ctx, fresh)
+    commitState(fresh)
+    if (outcome.ok) succeed(outcome.message)
+    else fail(outcome.error)
   }
 
   const moveSelection = (delta: number) => {
@@ -313,6 +315,9 @@ export function App() {
         break
       case "u":
         undo()
+        break
+      case "r":
+        restoreAll()
         break
       default:
         break

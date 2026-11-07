@@ -1,12 +1,14 @@
 # Dotmanager (v2) - progress
 
-Last updated: 2026-11-05
+Last updated: 2026-11-07
 
 ## Current task
 
-Waiting on the user's manual test of the core flow: `a`/`A` add, navigate/expand,
-`x` forget, `S` sync, `P` push modal, `space` operations modal. The command
-palette (`:`) is intentionally NOT implemented yet per user instruction.
+Done: `undo` (`u`) now reverts the last entry in `state.pending` (operations
+pending) instead of session-only history, so it works after a restart and stops
+when the pending count hits zero. New `r` -> restore removes all symlinks and
+moves the repo copies back to their original locations (per-item `forget`, ops
+stay in pending awaiting push). Awaiting user test.
 
 ## Done
 
@@ -36,7 +38,7 @@ palette (`:`) is intentionally NOT implemented yet per user instruction.
 ## Verification
 
 ```
-bun test          # 17 pass
+bun test          # 19 pass
 bun run typecheck # clean
  Pty checks: boot + quit, A-prompt add, tab + x forget (file restored,
  content intact), S sync failure message without a remote, tree navigation
