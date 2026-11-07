@@ -252,6 +252,13 @@ export function App() {
         }
         return
       }
+      if (modalRef.current.kind === "confirm-restore") {
+        if (key.name === "return" || key.name === "enter" || key.name === "r") {
+          setModal(null)
+          restoreAll()
+        }
+        return
+      }
       if (modalRef.current.kind === "help") {
         setModal(null)
         return
@@ -340,7 +347,9 @@ export function App() {
         undo()
         break
       case "r":
-        restoreAll()
+        setModal({
+          kind: "confirm-restore",
+        })
         break
       case "space":
         if (focus === "files" && selectedRow) addPath(selectedRow.path)
@@ -361,6 +370,21 @@ export function App() {
     />
   ) : modal.kind === "help" ? (
     <Modal title=" Keybindings — press any key to close " rows={helpRows()} selected={0} width={width} height={height} />
+  ) : modal.kind === "confirm-restore" ? (
+    <Modal
+      title=" Restore all — unmanage everything? "
+      rows={[
+        { label: `Removes all ${state.items.length} symlinks and moves the` },
+        { label: "content back to its original location." },
+        { label: "" },
+        { label: "You will need to re-add items afterwards." },
+        { label: "" },
+        { label: "enter  confirm · esc  cancel" },
+      ]}
+      selected={0}
+      width={width}
+      height={height}
+    />
   ) : (
     <Modal title=" Command palette " rows={paletteRows()} selected={paletteIndex} width={width} height={height} />
   )

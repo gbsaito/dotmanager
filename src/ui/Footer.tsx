@@ -14,6 +14,7 @@ export type ModalState =
   | { kind: "push"; changes: string[] }
   | { kind: "palette" }
   | { kind: "help" }
+  | { kind: "confirm-restore" }
   | null
 
 type FooterProps = {
