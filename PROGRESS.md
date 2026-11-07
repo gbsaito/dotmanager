@@ -4,13 +4,11 @@ Last updated: 2026-11-07
 
 ## Current task
 
-`r` semantics changed to match user expectation: restore is now **temporary** —
-unlinks every symlink and *copies* the repo copy to the original location;
-items stay managed, manifest/pending/repo untouched, so `S` immediately
-relinks everything ("Restored N items") with no merge/overwrite prompts. To
-permanently unmanage, use `x` per item. Confirm modal text + help updated;
-new regression test (restore → apply cycle); 20 tests pass; binary rebuilt
-(ba8ac73). Awaiting user test of restore -> sync.
+User ran `r` on the pre-change binary (old restore = forget commits, 25 items
+unmanaged) then managed `.bash_history`. Re-added the 25 item paths via
+ops.add: items 26, manifest 26, symlinks relinked, pushed. `.bash_history` is
+managed from their own add — suggest `x` if unwanted. Remind: relaunch uses
+the new binary where `r` is temporary (no forgets, S relinks).
 
 ## Done
 
