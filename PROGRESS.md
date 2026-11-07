@@ -4,23 +4,15 @@ Last updated: 2026-11-07
 
 ## Current task
 
-Recovery after the user deleted `~/.config/dotmanager/{state,config}.json` to
-clear "operations pending" (the managed list lived in state.json):
-- `dotmanager.json` in ~/dotfiles was EMPTY — toggle-war `forget` commits were
-  pushed, wiping the manifest on origin too. `apply` (S sync) restores from
-  that manifest, so sync had nothing to restore. (Earlier no-remote theory was
-  WRONG — config.json still existed; the gate was the empty manifest.)
-- Repo content for `.config/yt-dlp`, `.config/wireplumber` (home = dangling
-  symlink), `.config/urlink`, `.local/bin/mic-gain` (home = real file) was
-  re-restored from the forget-commit parents; the other 21/25 repo copies never
-  moved. Manifest rebuilt to 25 items, pushed (`origin/main`).
-- App code: `S` sync now runs `apply` even when no remote is configured
-  (local restore) and reports `apply` failures instead of masking them. Binary
-  rebuilt (457db...).
-- User presses `S` in the fresh binary: apply relinks, managed section returns
-  (25 items). `operations pending` cleared by the state.json deletion as asked.
-- Lesson: include `dotmanager.json`/state rebuild guidance in the README hazard
-  for deleting state.json.
+Recovered again — the user ran `r` (restore) which forgot all 25 items and
+pushed those commits (correct semantics: unmanage everything = manifest empty),
+then expected `S` to bring the managed set back; `S` builds state from the
+manifest, so after `r` there is nothing to restore ("no dotmanager.json
+manifest" error). NOT a bug to fix by changing restore semantics — documented:
+`r` unmans, `S` re-links what the manifest claims is managed.
+Content was safe in home as real files; re-added all 25 via ops.add (same
+code path as pressing `a`): state.json items 25, pending 25, manifest 25,
+symlinks relinked, pushed (`9566556`).
 
 ## Done
 
