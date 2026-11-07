@@ -89,7 +89,7 @@ export function App() {
     }
   }
 
-  /** Undo the last pending operation: revert its add (forget) or forget (re-add). */
+  /** Undo the last pending operation: revert it and drop it from pending. */
   const undo = () => {
     const fresh = loadState(ctx.paths.statePath)
     const last = fresh.pending[fresh.pending.length - 1]
@@ -97,8 +97,15 @@ export function App() {
       succeed("nothing to undo")
       return
     }
-    if (last.kind === "add") forgetPath(last.path)
-    else addPath(last.path)
+    const count = fresh.pending.length
+    const outcome = last.kind === "add" ? forget(ctx, fresh, last.path) : add(ctx, fresh, last.path)
+    if (outcome.ok) {
+      // Revert leaves no pending trace: drop the revert's own entry + the original.
+      fresh.pending = fresh.pending.slice(0, count - 1)
+    }
+    commitState(fresh)
+    if (outcome.ok) succeed(outcome.message)
+    else fail(outcome.error)
   }
 
   const restoreAll = () => {

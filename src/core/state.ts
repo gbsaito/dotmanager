@@ -58,6 +58,7 @@ export function loadState(statePath: string, home: string = homedir()): State {
 
 export function saveState(statePath: string, state: State, home: string = homedir()): void {
   // Serialize with `~/...` so the state file never hardcodes a username.
+  // ponytail: pending capped at the 25 newest entries (undo-history buffer); add a retained log when older history matters
   const portable = {
     ...state,
     items: state.items.map((item) => ({
@@ -65,7 +66,7 @@ export function saveState(statePath: string, state: State, home: string = homedi
       path: item.path.startsWith("~") ? item.path : displayPath(item.path, home),
       backupPath: item.backupPath && !item.backupPath.startsWith("~") ? displayPath(item.backupPath, home) : item.backupPath,
     })),
-    pending: state.pending.map((op) => ({ ...op, path: op.path.startsWith("~") ? op.path : displayPath(op.path, home) })),
+    pending: state.pending.slice(-25).map((op) => ({ ...op, path: op.path.startsWith("~") ? op.path : displayPath(op.path, home) })),
   }
   mkdirSync(dirname(statePath), { recursive: true })
   writeFileSync(statePath, `${JSON.stringify(portable, null, 2)}\n`, "utf8")

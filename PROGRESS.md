@@ -4,15 +4,13 @@ Last updated: 2026-11-07
 
 ## Current task
 
-Done: `space` adds the selected row (file *or* directory, from the files pane)
-straight to managed without toggling expansion — unlike `enter`, which opens
-dirs. In the managed pane it reports "nothing to add". Awaiting user test.
-
-Also done earlier: `undo` (`u`) reverts the last entry in `state.pending`
-(operations pending) instead of session-only history, so it works after a
-restart and stops when the pending count hits zero. `r` -> restore removes all
-symlinks and moves the repo copies back to their original locations (per-item
-`forget`, ops stay in pending awaiting push).
+Done, awaiting user test: `u` now reverts the last pending op **and drops it**
+from `state.pending` — the revert itself leaves no pending entry, so the
+"operations pending" counter decreases with every undo instead of climbing
+(toggle pairs are gone; earlier session had grown 6 add/forget pairs).
+`state.pending` is capped at the 25 newest entries on save (undo-history
+buffer). `r` -> restore (remove all symlinks, restore originals) and `space`
+(add selection without expanding dirs) landed earlier today.
 
 ## Done
 
