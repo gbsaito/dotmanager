@@ -4,15 +4,9 @@ Last updated: 2026-11-07
 
 ## Current task
 
-Recovered again — the user ran `r` (restore) which forgot all 25 items and
-pushed those commits (correct semantics: unmanage everything = manifest empty),
-then expected `S` to bring the managed set back; `S` builds state from the
-manifest, so after `r` there is nothing to restore ("no dotmanager.json
-manifest" error). NOT a bug to fix by changing restore semantics — documented:
-`r` unmans, `S` re-links what the manifest claims is managed.
-Content was safe in home as real files; re-added all 25 via ops.add (same
-code path as pressing `a`): state.json items 25, pending 25, manifest 25,
-symlinks relinked, pushed (`9566556`).
+`r` (restore all) is now gated behind a confirm modal — `esc` cancels,
+`enter`/`r` confirms. Help text updated. Binary rebuilt (d9bda83). Awaiting
+user test of the full recovered state (25 items managed) + this confirm.
 
 ## Done
 
