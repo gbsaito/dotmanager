@@ -72,7 +72,7 @@ export function helpRows(): ModalRow[] {
     { label: "S              sync (pull + push)" },
     { label: "P              push (shows changes)" },
     { label: "u              undo last pending op (add/forget)" },
-    { label: "r              restore all: remove symlinks (confirm)" },
+    { label: "r              restore: symlinks home (sync relinks)" },
     { label: ":              command palette (b t r s f)" },
     { label: "?              this help" },
     { label: "q              quit" },

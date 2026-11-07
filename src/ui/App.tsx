@@ -372,12 +372,12 @@ export function App() {
     <Modal title=" Keybindings — press any key to close " rows={helpRows()} selected={0} width={width} height={height} />
   ) : modal.kind === "confirm-restore" ? (
     <Modal
-      title=" Restore all — unmanage everything? "
+      title=" Restore all — remove symlinks? "
       rows={[
-        { label: `Removes all ${state.items.length} symlinks and moves the` },
+        { label: `Removes all ${state.items.length} symlinks and copies the` },
         { label: "content back to its original location." },
         { label: "" },
-        { label: "You will need to re-add items afterwards." },
+        { label: "Items stay managed — press S to relink them." },
         { label: "" },
         { label: "enter  confirm · esc  cancel" },
       ]}

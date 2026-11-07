@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { defaultConfig, loadConfig, resolvePaths, saveConfig, type Ctx } from "../src/core/config.ts"
 import { getRemote, isRepo, push, setRemote, sync } from "../src/core/git.ts"
-import { add, apply, forget, writeManifest } from "../src/core/ops.ts"
+import { add, apply, forget, restore, writeManifest } from "../src/core/ops.ts"
 import { emptyState, loadState, saveState } from "../src/core/state.ts"
 import { displayPath, repoRelativePath } from "../src/core/util.ts"
 
@@ -226,6 +226,36 @@ describe("git storage", () => {
     expect(add(ctx, state, second).ok).toBe(true)
     expect(sync(ctx.storage).ok).toBe(true)
     expect(readFileSync(join(cloneDir, ".vimrc"), "utf8")).toBe("set number")
+  })
+})
+
+describe("restore", () => {
+  test("unlinks symlinks to home but stays managed; apply relinks afterwards", () => {
+    const ctx = makeCtx()
+    const state = emptyState()
+    const file = join(ctx.home, ".zshrc")
+    writeFileSync(file, "export EDITOR=helix")
+    expect(add(ctx, state, file).ok).toBe(true)
+
+    const result = restore(ctx, state)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.message).toContain("stay managed")
+
+    const stat = lstatSync(file)
+    expect(stat.isSymbolicLink()).toBe(false)
+    expect(stat.isFile()).toBe(true)
+    expect(readFileSync(file, "utf8")).toBe("export EDITOR=helix")
+    // repo copy and manifest untouched — a later sync relinks everything
+    expect(existsSync(join(ctx.storage, ".zshrc"))).toBe(true)
+    expect(state.items).toHaveLength(1)
+
+    const relinked = apply(ctx, state)
+    expect(relinked.ok).toBe(true)
+    if (!relinked.ok) return
+    expect(relinked.restored).toBe(1)
+    expect(lstatSync(file).isSymbolicLink()).toBe(true)
+    expect(state.items).toHaveLength(1)
   })
 })
 

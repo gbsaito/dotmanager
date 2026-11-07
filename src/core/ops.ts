@@ -226,18 +226,40 @@ export function forget(ctx: Ctx, state: State, absolutePath: string, now: Date =
   }
 }
 
-/** Remove every symlink and move the repo copies back to their original locations. */
-export function restore(ctx: Ctx, state: State, now: Date = new Date()): OpOutcome {
+/**
+ * Remove every symlink and copy the repo copies back to the original
+ * locations — temporary "real files" mode: items stay managed, so a later
+ * sync (apply) relinks them. The repo, manifest and pending are untouched.
+ */
+export function restore(ctx: Ctx, state: State): OpOutcome {
   const failures: string[] = []
   let count = 0
   for (const item of [...state.items]) {
-    const outcome = forget(ctx, state, item.path, now)
-    if (outcome.ok) count++
-    else failures.push(outcome.error)
+    const repoPath = join(ctx.storage, item.repoPath)
+    const shown = displayPath(item.path, ctx.home)
+    if (!existsSync(repoPath)) {
+      failures.push(`${shown}: no repo copy`)
+      continue
+    }
+    try {
+      if (existsSync(item.path) || isSymlinkPath(item.path)) {
+        const stat = lstatSync(item.path)
+        if (!stat.isSymbolicLink()) continue // real file already; leave it alone
+        if (readlinkSync(item.path) !== repoPath) {
+          failures.push(`${shown}: points to ${readlinkSync(item.path)}, not ${repoPath}`)
+          continue
+        }
+        unlinkSync(item.path)
+      }
+      cpSync(repoPath, item.path, { recursive: true, preserveTimestamps: true })
+      count++
+    } catch (error) {
+      failures.push(`${shown}: ${(error as Error).message}`)
+    }
   }
-  if (failures.length > 0) return { ok: false, error: failures.join("; ") }
-  recordAction(state, "info", `Restored ${count} items`)
-  return { ok: true, message: `Removed all symlinks, restored ${count} item(s)` }
+  const note = failures.length > 0 ? `, ${failures.length} skipped` : ""
+  recordAction(state, "info", `Removed all symlinks (${count})`)
+  return { ok: true, message: `Removed ${count} symlink(s)${note} — items stay managed, press S to relink` }
 }
 
 /**
