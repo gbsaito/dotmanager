@@ -4,11 +4,13 @@ Last updated: 2026-11-07
 
 ## Current task
 
-User ran `r` on the pre-change binary (old restore = forget commits, 25 items
-unmanaged) then managed `.bash_history`. Re-added the 25 item paths via
-ops.add: items 26, manifest 26, symlinks relinked, pushed. `.bash_history` is
-managed from their own add — suggest `x` if unwanted. Remind: relaunch uses
-the new binary where `r` is temporary (no forgets, S relinks).
+Final `r` semantics (user-approved mental model): restore unlinks all
+symlinks, copies content home, and clears `state.items` locally (managed pane
+truthfully empties) — but the repo keeps every copy and the manifest intact.
+`S` = sync-from-repo: apply rebuilds `state.items` from the manifest and
+relinks — "Restored N items". No commits, no pending, other machines
+unaffected; permanent unmanage stays `x` per item. Test covers the
+restore→apply round trip. 20 tests pass; binary rebuilt (55aecfe).
 
 ## Done
 
