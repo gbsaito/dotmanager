@@ -4,11 +4,15 @@ Last updated: 2026-11-07
 
 ## Current task
 
-Done: `undo` (`u`) now reverts the last entry in `state.pending` (operations
-pending) instead of session-only history, so it works after a restart and stops
-when the pending count hits zero. New `r` -> restore removes all symlinks and
-moves the repo copies back to their original locations (per-item `forget`, ops
-stay in pending awaiting push). Awaiting user test.
+Done: `space` adds the selected row (file *or* directory, from the files pane)
+straight to managed without toggling expansion — unlike `enter`, which opens
+dirs. In the managed pane it reports "nothing to add". Awaiting user test.
+
+Also done earlier: `undo` (`u`) reverts the last entry in `state.pending`
+(operations pending) instead of session-only history, so it works after a
+restart and stops when the pending count hits zero. `r` -> restore removes all
+symlinks and moves the repo copies back to their original locations (per-item
+`forget`, ops stay in pending awaiting push).
 
 ## Done
 
