@@ -4,12 +4,13 @@ Last updated: 2026-11-07
 
 ## Current task
 
-Sync made non-interactive (git.ts): `GIT_EDITOR=true` on every git call so
-merge/rebase prompts can never hang the TUI, `pull --rebase -X theirs`
-(auto-resolves content conflicts in favor of local commits — "overwrite"),
-and a stuck rebase is auto-aborted instead of leaving the repo mid-rebase.
-Verified on a scratch repo (divergent + same-file conflict → local content
-wins, no editor). Binary rebuilt (95f6807). Awaiting user test of S sync.
+`r` semantics changed to match user expectation: restore is now **temporary** —
+unlinks every symlink and *copies* the repo copy to the original location;
+items stay managed, manifest/pending/repo untouched, so `S` immediately
+relinks everything ("Restored N items") with no merge/overwrite prompts. To
+permanently unmanage, use `x` per item. Confirm modal text + help updated;
+new regression test (restore → apply cycle); 20 tests pass; binary rebuilt
+(ba8ac73). Awaiting user test of restore -> sync.
 
 ## Done
 
