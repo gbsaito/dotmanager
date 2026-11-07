@@ -4,13 +4,12 @@ Last updated: 2026-11-07
 
 ## Current task
 
-Done, awaiting user test: `u` now reverts the last pending op **and drops it**
-from `state.pending` — the revert itself leaves no pending entry, so the
-"operations pending" counter decreases with every undo instead of climbing
-(toggle pairs are gone; earlier session had grown 6 add/forget pairs).
-`state.pending` is capped at the 25 newest entries on save (undo-history
-buffer). `r` -> restore (remove all symlinks, restore originals) and `space`
-(add selection without expanding dirs) landed earlier today.
+Stale-binary bug found: `~/.local/bin/dotmanager` symlinked to the Nov 6 build,
+which pre-dated today's undo/restore/space work — the user was testing an old
+undo ("operations pending kept climbing"). No running processes were stale;
+rebuilt `dotmanager-linux-x64` from source (help-string verified in binary) and
+boot-checked in a pty. Awaiting user test of: `u` reverts AND drops the pending
+entry (counter decreases), pending capped at 25, `r` restore, `space` add.
 
 ## Done
 
@@ -55,5 +54,9 @@ bun run typecheck # clean
 4. Migration: push the new migration commits to the old remote (or start fresh
    for v2) — old remote already holds them (`ahead 24`).
 
-## 2026-11-06
+Launcher discipline: `~/.local/bin/dotmanager` symlinks to the compiled
+binary — after source changes run `bun run build` and
+`mv dotmanager dotmanager-linux-x64`, else the app silently runs old logic.
+## 2026-11-07 (later)
+- Stale binary (Nov 6 build) caused the "undo still increases pending" report; rebuilt `dotmanager-linux-x64` from source.
 - Added install.sh (curl | bash installs latest release; gh or GITHUB_TOKEN, private-repo aware) and release.sh (build + tag + publish asset). Published v1.0.0 (dotmanager-linux-x64). Install: `curl -fsSL https://raw.githubusercontent.com/gbsaito/dotmanager/main/install.sh | bash`
