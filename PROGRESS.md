@@ -4,9 +4,12 @@ Last updated: 2026-11-07
 
 ## Current task
 
-`r` (restore all) is now gated behind a confirm modal — `esc` cancels,
-`enter`/`r` confirms. Help text updated. Binary rebuilt (d9bda83). Awaiting
-user test of the full recovered state (25 items managed) + this confirm.
+Sync made non-interactive (git.ts): `GIT_EDITOR=true` on every git call so
+merge/rebase prompts can never hang the TUI, `pull --rebase -X theirs`
+(auto-resolves content conflicts in favor of local commits — "overwrite"),
+and a stuck rebase is auto-aborted instead of leaving the repo mid-rebase.
+Verified on a scratch repo (divergent + same-file conflict → local content
+wins, no editor). Binary rebuilt (95f6807). Awaiting user test of S sync.
 
 ## Done
 
