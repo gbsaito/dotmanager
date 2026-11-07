@@ -319,6 +319,10 @@ export function App() {
       case "r":
         restoreAll()
         break
+      case "space":
+        if (focus === "files" && selectedRow) addPath(selectedRow.path)
+        else fail("nothing to add")
+        break
       default:
         break
     }

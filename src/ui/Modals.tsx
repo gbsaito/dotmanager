@@ -66,6 +66,7 @@ export function helpRows(): ModalRow[] {
     { label: "h l / arrows   collapse / expand directory" },
     { label: "enter          activate row" },
     { label: "a              add selected to managed" },
+    { label: "space          add selection to managed (no open)" },
     { label: "A              add by path" },
     { label: "x              forget managed item" },
     { label: "S              sync (pull + push)" },
