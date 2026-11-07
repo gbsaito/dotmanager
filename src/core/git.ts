@@ -4,7 +4,8 @@ import { basename, dirname, join } from "node:path"
 export type GitResult = { ok: boolean; stdout: string; stderr: string }
 
 function run(cwd: string, args: string[]): GitResult {
-  const proc = Bun.spawnSync(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" })
+  // GIT_EDITOR=true: never open an editor (merge/rebase prompts hang the TUI).
+  const proc = Bun.spawnSync(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, GIT_EDITOR: "true" } })
   return {
     ok: proc.exitCode === 0,
     stdout: proc.stdout.toString().trim(),
@@ -74,9 +75,18 @@ export function setRemote(storage: string, url: string): GitResult {
   return run(storage, args)
 }
 
+function rebaseInProgress(storage: string): boolean {
+  const gitDir = run(storage, ["rev-parse", "--git-dir"]).stdout
+  return Boolean(gitDir) && ["rebase-merge", "rebase-apply"].some((name) => existsSync(join(gitDir, name)))
+}
+
 export function pull(storage: string): GitResult {
   const branch = run(storage, ["branch", "--show-current"]).stdout || "main"
-  return run(storage, ["pull", "--rebase", "origin", branch])
+  // ponytail: `-X theirs` lets the local commits win content conflicts (overwrite);
+  // switch to `-X ours` once a "remote wins" choice matters
+  const res = run(storage, ["pull", "--rebase", "-X", "theirs", "origin", branch])
+  if (!res.ok && rebaseInProgress(storage)) run(storage, ["rebase", "--abort"])
+  return res
 }
 
 /** True once the repo has at least one commit. */
