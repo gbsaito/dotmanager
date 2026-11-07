@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { defaultConfig, loadConfig, resolvePaths, saveConfig, type Ctx } from "../src/core/config.ts"
 import { getRemote, isRepo, push, setRemote, sync } from "../src/core/git.ts"
-import { add, apply, forget, restore, writeManifest } from "../src/core/ops.ts"
+import { add, apply, forget, readManifest, restore, writeManifest } from "../src/core/ops.ts"
 import { emptyState, loadState, saveState } from "../src/core/state.ts"
 import { displayPath, repoRelativePath } from "../src/core/util.ts"
 
@@ -230,7 +230,7 @@ describe("git storage", () => {
 })
 
 describe("restore", () => {
-  test("unlinks symlinks to home but stays managed; apply relinks afterwards", () => {
+  test("unlinks to home and clears managed; the repo keeps copies so apply re-manages", () => {
     const ctx = makeCtx()
     const state = emptyState()
     const file = join(ctx.home, ".zshrc")
@@ -240,15 +240,16 @@ describe("restore", () => {
     const result = restore(ctx, state)
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.message).toContain("stay managed")
+    expect(result.message).toContain("press S to relink")
 
     const stat = lstatSync(file)
     expect(stat.isSymbolicLink()).toBe(false)
     expect(stat.isFile()).toBe(true)
     expect(readFileSync(file, "utf8")).toBe("export EDITOR=helix")
-    // repo copy and manifest untouched — a later sync relinks everything
+    // truthfully unmanaged locally, but the repo still tracks it
+    expect(state.items).toHaveLength(0)
     expect(existsSync(join(ctx.storage, ".zshrc"))).toBe(true)
-    expect(state.items).toHaveLength(1)
+    expect(readManifest(ctx.storage)).toEqual([".zshrc"])
 
     const relinked = apply(ctx, state)
     expect(relinked.ok).toBe(true)

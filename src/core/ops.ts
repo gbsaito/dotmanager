@@ -227,39 +227,41 @@ export function forget(ctx: Ctx, state: State, absolutePath: string, now: Date =
 }
 
 /**
- * Remove every symlink and copy the repo copies back to the original
- * locations — temporary "real files" mode: items stay managed, so a later
- * sync (apply) relinks them. The repo, manifest and pending are untouched.
+ * Remove every symlink and copy the content back to its original location,
+ * clearing the managed list locally — but the repo keeps its copies and the
+ * manifest, so a later sync (apply) re-links and re-manages everything.
  */
 export function restore(ctx: Ctx, state: State): OpOutcome {
   const failures: string[] = []
-  let count = 0
+  const removed: string[] = []
   for (const item of [...state.items]) {
     const repoPath = join(ctx.storage, item.repoPath)
     const shown = displayPath(item.path, ctx.home)
-    if (!existsSync(repoPath)) {
-      failures.push(`${shown}: no repo copy`)
+    const source = existsSync(repoPath) ? repoPath : item.backupPath && existsSync(item.backupPath) ? item.backupPath : null
+    if (!source) {
+      failures.push(`${shown}: no repo or backup copy`)
       continue
     }
     try {
       if (existsSync(item.path) || isSymlinkPath(item.path)) {
         const stat = lstatSync(item.path)
-        if (!stat.isSymbolicLink()) continue // real file already; leave it alone
+        if (!stat.isSymbolicLink()) continue // already real content; just unmanage it
         if (readlinkSync(item.path) !== repoPath) {
           failures.push(`${shown}: points to ${readlinkSync(item.path)}, not ${repoPath}`)
           continue
         }
         unlinkSync(item.path)
       }
-      cpSync(repoPath, item.path, { recursive: true, preserveTimestamps: true })
-      count++
+      cpSync(source, item.path, { recursive: true, preserveTimestamps: true })
+      removed.push(item.path)
     } catch (error) {
       failures.push(`${shown}: ${(error as Error).message}`)
     }
   }
+  state.items = state.items.filter((entry) => !removed.includes(entry.path))
   const note = failures.length > 0 ? `, ${failures.length} skipped` : ""
-  recordAction(state, "info", `Removed all symlinks (${count})`)
-  return { ok: true, message: `Removed ${count} symlink(s)${note} — items stay managed, press S to relink` }
+  recordAction(state, "info", `Removed ${removed.length} symlinks`)
+  return { ok: true, message: `Removed ${removed.length} symlink(s)${note} — press S to relink` }
 }
 
 /**

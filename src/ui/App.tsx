@@ -374,10 +374,10 @@ export function App() {
     <Modal
       title=" Restore all — remove symlinks? "
       rows={[
-        { label: `Removes all ${state.items.length} symlinks and copies the` },
-        { label: "content back to its original location." },
+        { label: `Unlinks all ${state.items.length} symlinks and puts the` },
+        { label: "content back at its original location." },
         { label: "" },
-        { label: "Items stay managed — press S to relink them." },
+        { label: "The repo keeps everything — press S to relink." },
         { label: "" },
         { label: "enter  confirm · esc  cancel" },
       ]}
